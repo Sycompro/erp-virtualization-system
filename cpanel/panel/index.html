@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cPanel — ERP Virtualization</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        /* ─── Variables ─── */
+        :root {
+            --bg-body: #080b14;
+            --bg-sidebar: #0d1117;
+            --bg-main: #0f1318;
+            --bg-card: rgba(22, 27, 34, 0.95);
+            --bg-glass: rgba(255, 255, 255, 0.04);
+            --bg-glass-hover: rgba(255, 255, 255, 0.07);
+            --bg-input: rgba(255, 255, 255, 0.05);
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent: #6366f1;
+            --accent-hover: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --success: #2ea043;
+            --success-bg: rgba(46, 160, 67, 0.15);
+            --warning: #d29922;
+            --warning-bg: rgba(210, 153, 34, 0.15);
+            --danger: #f85149;
+            --danger-bg: rgba(248, 81, 73, 0.15);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.14);
+            --sidebar-w: 260px;
+            --radius: 10px;
+            --font: 'Inter', -apple-system, sans-serif;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 14px;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-body);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── Sidebar ─── */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-brand svg {
+            width: 28px;
+            height: 28px;
+            color: var(--accent);
+        }
+
+        .sidebar-brand span {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 20px;
+        }
+
+        .nav-section-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            padding: 8px 12px 6px;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 150ms;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-glass-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--accent-glow);
+            color: var(--accent-hover);
+            border-color: rgba(99, 102, 241, 0.2);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+            flex-shrink: 0;
+        }
+
+        .nav-item .badge-count {
+            margin-left: auto;
+            background: var(--accent);
+            color: #fff;
+            font-size: 0.7rem;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .sidebar-footer {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .sidebar-footer .server-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 6px var(--success);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: .5
+            }
+        }
+
+        /* ─── Main Content ─── */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-main);
+            flex-shrink: 0;
+        }
+
+        .topbar h1 {
+            font-size: 1.15rem;
+            font-weight: 700;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* ─── Page Sections ─── */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+            animation: fadeIn .3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        /* ─── Stats Grid ─── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+        }
+
+        .stat-box .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+
+        .stat-box .stat-value {
+            font-size: 1.7rem;
+            font-weight: 800;
+        }
+
+        .stat-box .stat-sub {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .stat-value.accent {
+            color: var(--accent-hover);
+        }
+
+        .stat-value.success {
+            color: var(--success);
+        }
+
+        .stat-value.warning {
+            color: var(--warning);
+        }
+
+        /* ─── Cards ─── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        /* ─── Tables ─── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.875rem;
+            vertical-align: middle;
+        }
+
+        tr:hover td {
+            background: var(--bg-glass);
+        }
+
+        /* ─── Badges ─── */
+        .badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .badge-success {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: var(--danger-bg);
+            color: var(--danger);
+        }
+
+        .badge-info {
+            background: var(--accent-glow);
+            color: var(--accent-hover);
+        }
+
+        /* ─── Buttons ─── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-family: var(--font);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 150ms;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            box-shadow: 0 2px 10px var(--accent-glow);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border-color: var(--border);
+            color: var(--text-secondary);
+        }
+
+        .btn-outline:hover {
+            border-color: var(--border-hover);
+            color: var(--text-primary);
+            background: var(--bg-glass);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #da3633;
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #fff;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.75rem;
+        }
+
+        .btn-icon {
+            padding: 6px;
+            border-radius: 6px;
+        }
+
+        /* ─── Forms ─── */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 9px 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: var(--font);
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 150ms;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent-glow);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* ─── Switch Toggle ─── */
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: var(--bg-glass);
+            border-radius: 22px;
+            transition: .3s;
+            border: 1px solid var(--border);
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            left: 2px;
+            bottom: 2px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .3s;
+        }
+
+        .toggle input:checked+.toggle-slider {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .toggle input:checked+.toggle-slider::before {
+            transform: translateX(18px);
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-info {
+            flex: 1;
+        }
+
+        .setting-info .setting-name {
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+
+        .setting-info .setting-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* ─── App Card ─── */
+        .app-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px;
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            transition: all 200ms;
+        }
+
+        .app-item:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-glass-hover);
+        }
+
+        .app-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            flex-shrink: 0;
+        }
+
+        .app-icon-box.sap {
+            background: linear-gradient(135deg, #0056b8, #003d82);
+        }
+
+        .app-icon-box.office {
+            background: linear-gradient(135deg, #d83b01, #a52a00);
+        }
+
+        .app-icon-box.autocad {
+            background: linear-gradient(135deg, #00bfff, #0080ff);
+        }
+
+        .app-icon-box.libreoffice {
+            background: linear-gradient(135deg, #18a303, #0f7a02);
+        }
+
+        .app-icon-box.windows {
+            background: linear-gradient(135deg, #00a4ef, #0078d4);
+        }
+
+        .app-details {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .app-details h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .app-details p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .app-actions {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        /* ─── Empty State ─── */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 12px;
+            opacity: .4;
+        }
+
+        .empty-state p {
+            margin-top: 6px;
+            font-size: 0.85rem;
+        }
+
+        /* ─── Toast ─── */
+        .toast-wrap {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 12px 18px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.85rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+            animation: toastIn .3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toast.success {
+            border-left: 3px solid var(--success);
+        }
+
+        .toast.error {
+            border-left: 3px solid var(--danger);
+        }
+
+        @keyframes toastIn {
+            from {
+                opacity: 0;
+                transform: translateX(40px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0)
+            }
+        }
+
+        /* ─── Scrollbar ─── */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, .1);
+            border-radius: 3px;
+        }
+
+        /* ─── Modal ─── */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .6);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 24px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, .5);
+            animation: fadeIn .25s ease;
+        }
+
+        .modal h2 {
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <svg viewBox="0 0 32 32" fill="none">
+                <rect x="3" y="5" width="26" height="18" rx="3" stroke="currentColor" stroke-width="2" />
+                <path d="M12 23v4M20 23v4M10 27h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+            <span>cPanel</span>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <div class="nav-section-title">General</div>
+                <div class="nav-item active" data-page="dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="7" height="7" rx="1" />
+                    </svg>
+                    Dashboard
+                </div>
+                <div class="nav-item" data-page="apps">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <path d="M8 21h8M12 17v4" />
+                    </svg>
+                    Aplicaciones
+                    <span class="badge-count" id="apps-count">5</span>
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Gestión</div>
+                <div class="nav-item" data-page="users">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+                    </svg>
+                    Usuarios
+                    <span class="badge-count" id="users-count">0</span>
+                </div>
+                <div class="nav-item" data-page="sessions">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    Sesiones Activas
+                </div>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Sistema</div>
+                <div class="nav-item" data-page="streaming">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="23 7 16 12 23 17 23 7" />
+                        <rect x="1" y="5" width="15" height="14" rx="2" />
+                    </svg>
+                    Streaming
+                </div>
+                <div class="nav-item" data-page="settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3" />
+                        <path
+                            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                    </svg>
+                    Configuración
+                </div>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="server-status">
+                <span class="status-indicator"></span>
+                <span>Servidor Local Activo</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+    <div class="main">
+        <div class="topbar">
+            <h1 id="page-title">Dashboard</h1>
+            <div class="topbar-right">
+                <button class="btn btn-outline btn-sm" onclick="refreshAll()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10" />
+                        <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                    </svg>
+                    Actualizar
+                </button>
+                <button class="btn btn-primary btn-sm" id="railway-connect-btn" onclick="connectRailway()">
+                    ☁️ Conectar Railway
+                </button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- ═══ DASHBOARD ═══ -->
+            <div class="page active" id="page-dashboard">
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-label">Containers Activos</div>
+                        <div class="stat-value accent" id="s-containers">0</div>
+                        <div class="stat-sub">de 15 máximo</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Sesiones Activas</div>
+                        <div class="stat-value success" id="s-sessions">0</div>
+                        <div class="stat-sub">usuarios conectados</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Latencia Promedio</div>
+                        <div class="stat-value" id="s-latency">--</div>
+                        <div class="stat-sub">ms</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Ancho de Banda</div>
+                        <div class="stat-value" id="s-bandwidth">--</div>
+                        <div class="stat-sub">Mbps</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Apps Habilitadas</div>
+                        <div class="stat-value accent" id="s-apps">5</div>
+                        <div class="stat-sub">disponibles</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">Railway</div>
+                        <div class="stat-value warning" id="s-railway">Offline</div>
+                        <div class="stat-sub" id="s-railway-url">No conectado</div>
+                    </div>
+                </div>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📦 Containers en Ejecución</div>
+                        </div>
+                        <div id="dash-containers">
+                            <div class="empty-state">
+                                <p>Sin containers activos</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">👥 Últimas Conexiones</div>
+                        </div>
+                        <div id="dash-connections">
+                            <div class="empty-state">
+                                <p>Sin conexiones recientes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ APLICACIONES ═══ -->
+            <div class="page" id="page-apps">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🖥️ Aplicaciones Virtualizables</div>
+                        <button class="btn btn-primary btn-sm" onclick="openAddAppModal()">+ Agregar App</button>
+                    </div>
+                    <p style="color:var(--text-muted);font-size:.8rem;margin-bottom:16px;">Configura qué aplicaciones
+                        estarán disponibles para que tus clientes las utilicen de forma remota.</p>
+                    <div id="apps-list" class="card-grid"></div>
+                </div>
+            </div>
+
+            <!-- ═══ USUARIOS ═══ -->
+            <div class="page" id="page-users">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">👥 Gestión de Usuarios</div>
+                        <button class="btn btn-primary btn-sm" onclick="openAddUserModal()">+ Agregar Usuario</button>
+                    </div>
+                    <p style="color:var(--text-muted);font-size:.8rem;margin-bottom:16px;">Administra los clientes que
+                        tienen acceso al sistema de virtualización.</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Nombre</th>
+                                <th>Estado</th>
+                                <th>Última conexión</th>
+                                <th>Apps Permitidas</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table"></tbody>
+                    </table>
+                    <div id="users-empty" class="empty-state">
+                        <p>No hay usuarios registrados. Conecta con Railway para sincronizar usuarios.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ SESIONES ACTIVAS ═══ -->
+            <div class="page" id="page-sessions">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">🔒 Sesiones Activas</div>
+                        <button class="btn btn-danger btn-sm" onclick="disconnectAll()">Desconectar Todos</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Aplicación</th>
+                                <th>Duración</th>
+                                <th>IP</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="sessions-table"></tbody>
+                    </table>
+                    <div id="sessions-empty" class="empty-state">
+                        <p>No hay sesiones activas en este momento.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══ STREAMING ═══ -->
+            <div class="page" id="page-streaming">
+                <div class="card-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🎥 Calidad de Video</div>
+                        </div>
+                        <div class="form-group"><label class="form-label">Resolución</label><select class="form-select"
+                                id="opt-resolution">
+                                <option value="1280x720">1280×720 (HD)</option>
+                                <option value="1920x1080" selected>1920×1080 (Full HD)</option>
+                                <option value="2560x1440">2560×1440 (2K)</option>
+                                <option value="3840x2160">3840×2160 (4K)</option>
+                            </select></div>
+                        <div class="form-group"><label class="form-label">FPS</label><select class="form-select"
+                                id="opt-fps">
+                                <option value="30">30 FPS</option>
+                                <option value="60" selected>60 FPS</option>
+                                <option value="120">120 FPS</option>
+                            </select></div>
+                        <div class="form-group"><label class="form-label">Bitrate: <strong id="opt-bitrate-val">5000
+                                    kbps</strong></label><input type="range" id="opt-bitrate" min="1000" max="15000"
+                                value="5000" step="500" style="width:100%;accent-color:var(--accent)"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">⚡ Rendimiento</div>
+                        </div>
+                        <div class="form-group"><label class="form-label">Codec</label><select class="form-select"
+                                id="opt-codec">
+                                <option value="h264" selected>H.264 (Compatibilidad)</option>
+                                <option value="h265">H.265 (Eficiencia)</option>
+                                <option value="vp9">VP9 (WebRTC)</option>
+                                <option value="av1">AV1</option>
+                            </select></div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Aceleración por Hardware</div>
+                                <div class="setting-desc">Usar GPU para codificación</div>
+                            </div><label class="toggle"><input type="checkbox" id="opt-hwaccel" checked><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Modo Baja Latencia</div>
+                                <div class="setting-desc">Priorizar velocidad sobre calidad</div>
+                            </div><label class="toggle"><input type="checkbox" id="opt-lowlatency" checked><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🌐 Red</div>
+                        </div>
+                        <div class="form-group"><label class="form-label">Protocolo</label><select class="form-select"
+                                id="opt-protocol">
+                                <option value="webrtc" selected>WebRTC (Recomendado)</option>
+                                <option value="websocket">WebSocket</option>
+                            </select></div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Reconexión Automática</div>
+                                <div class="setting-desc">Reconectar si se pierde la conexión</div>
+                            </div><label class="toggle"><input type="checkbox" id="opt-reconnect" checked><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Bitrate Adaptativo</div>
+                                <div class="setting-desc">Ajustar calidad según la red</div>
+                            </div><label class="toggle"><input type="checkbox" id="opt-adaptive" checked><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="saveStreamingSettings()" style="margin-top:8px;">💾 Guardar
+                    Configuración de Streaming</button>
+            </div>
+
+            <!-- ═══ CONFIGURACIÓN ═══ -->
+            <div class="page" id="page-settings">
+                <div class="card-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">☁️ Conexión Railway</div>
+                        </div>
+                        <div class="form-group"><label class="form-label">URL de Railway API</label><input type="url"
+                                class="form-input" id="cfg-railway-url"
+                                placeholder="https://erp-api-production-6448.up.railway.app"></div>
+                        <div class="form-group"><label class="form-label">JWT Secret</label><input type="password"
+                                class="form-input" id="cfg-jwt-secret" placeholder="Tu clave secreta"></div>
+                        <button class="btn btn-primary btn-sm" onclick="testRailwayConnection()">🧪 Probar
+                            Conexión</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🖥️ Servidor Local</div>
+                        </div>
+                        <div class="form-group"><label class="form-label">Puerto del Servidor</label><input
+                                type="number" class="form-input" id="cfg-port" value="8080"></div>
+                        <div class="form-group"><label class="form-label">Máx. Containers Simultáneos</label><input
+                                type="number" class="form-input" id="cfg-max-containers" value="15"></div>
+                        <div class="form-group"><label class="form-label">Máx. Containers por Usuario</label><input
+                                type="number" class="form-input" id="cfg-max-per-user" value="3"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">🔐 Seguridad</div>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Solo Conexiones SSL</div>
+                                <div class="setting-desc">Forzar HTTPS en todas las conexiones</div>
+                            </div><label class="toggle"><input type="checkbox" id="cfg-ssl" checked><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Autenticación Biométrica</div>
+                                <div class="setting-desc">Permitir FIDO2/WebAuthn</div>
+                            </div><label class="toggle"><input type="checkbox" id="cfg-biometric" checked><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                        <div class="setting-row">
+                            <div class="setting-info">
+                                <div class="setting-name">Vinculación por Dispositivo</div>
+                                <div class="setting-desc">Limitar sesiones a dispositivos registrados</div>
+                            </div><label class="toggle"><input type="checkbox" id="cfg-device-lock"><span
+                                    class="toggle-slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="saveAllSettings()" style="margin-top:8px;">💾 Guardar Toda la
+                    Configuración</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ MODALS ═══ -->
+    <div class="modal-overlay" id="modal-add-app">
+        <div class="modal">
+            <h2>Agregar Aplicación</h2>
+            <div class="form-group"><label class="form-label">Nombre</label><input class="form-input" id="new-app-name"
+                    placeholder="Ej: SAP GUI"></div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Tipo</label><select class="form-select"
+                        id="new-app-type">
+                        <option value="sap">SAP</option>
+                        <option value="office">Office</option>
+                        <option value="autocad">AutoCAD</option>
+                        <option value="libreoffice">LibreOffice</option>
+                        <option value="windows">Windows Desktop</option>
+                        <option value="custom">Personalizado</option>
+                    </select></div>
+                <div class="form-group"><label class="form-label">Protocolo</label><select class="form-select"
+                        id="new-app-protocol">
+                        <option value="VNC">VNC</option>
+                        <option value="RDP">RDP</option>
+                    </select></div>
+            </div>
+            <div class="form-group"><label class="form-label">Descripción</label><input class="form-input"
+                    id="new-app-desc" placeholder="Descripción breve de la app"></div>
+            <div class="form-group"><label class="form-label">Imagen Docker</label><input class="form-input"
+                    id="new-app-image" placeholder="erp-virtualization/nombre:latest"></div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('modal-add-app')">Cancelar</button>
+                <button class="btn btn-primary" onclick="addApp()">Agregar</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modal-add-user">
+        <div class="modal">
+            <h2>Agregar Usuario</h2>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Usuario</label><input class="form-input"
+                        id="new-user-name" placeholder="usuario123"></div>
+                <div class="form-group"><label class="form-label">Nombre Completo</label><input class="form-input"
+                        id="new-user-fullname" placeholder="Juan Pérez"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label class="form-label">Email</label><input class="form-input"
+                        id="new-user-email" placeholder="correo@empresa.com"></div>
+                <div class="form-group"><label class="form-label">Contraseña</label><input type="password"
+                        class="form-input" id="new-user-pass" placeholder="Contraseña segura"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal('modal-add-user')">Cancelar</button>
+                <button class="btn btn-primary" onclick="addUser()">Crear Usuario</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ TOASTS ═══ -->
+    <div class="toast-wrap" id="toast-wrap"></div>
+
+    <script>
+        /* ═══════════════ STATE ═══════════════ */
+        const API = '';  // Relative to cpanel server
+
+        let apps = [
+            { id: '1', name: 'SAP GUI', type: 'sap', protocol: 'VNC', description: 'Sistema ERP empresarial', image: 'erp-virtualization/sap-gui:latest', enabled: true },
+            { id: '2', name: 'Microsoft Office', type: 'office', protocol: 'RDP', description: 'Word, Excel, PowerPoint', image: 'erp-virtualization/office:latest', enabled: true },
+            { id: '3', name: 'AutoCAD', type: 'autocad', protocol: 'RDP', description: 'Diseño CAD 2D/3D', image: 'erp-virtualization/autocad:latest', enabled: true },
+            { id: '4', name: 'LibreOffice', type: 'libreoffice', protocol: 'VNC', description: 'Suite ofimática libre', image: 'erp-virtualization/libreoffice:latest', enabled: true },
+            { id: '5', name: 'Windows Desktop', type: 'windows', protocol: 'RDP', description: 'Escritorio Windows completo', image: 'erp-virtualization/windows-desktop:latest', enabled: true }
+        ];
+
+        let users = [];
+        let sessions = [];
+
+        /* ═══════════════ NAVIGATION ═══════════════ */
+        document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+            item.addEventListener('click', () => {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+                const page = item.dataset.page;
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('page-' + page).classList.add('active');
+                document.getElementById('page-title').textContent = item.textContent.trim();
+            });
+        });
+
+        /* ═══════════════ RENDER ═══════════════ */
+        function renderApps() {
+            const grid = document.getElementById('apps-list');
+            grid.innerHTML = apps.map(app => `
+            <div class="app-item">
+                <div class="app-icon-box ${app.type}">${{ sap: '🏢', office: '📊', autocad: '📐', libreoffice: '📝', windows: '🖥️', custom: '📦' }[app.type] || '📦'}</div>
+                <div class="app-details">
+                    <h4>${app.name}</h4>
+                    <p>${app.description} · ${app.protocol}</p>
+                </div>
+                <div class="app-actions">
+                    <label class="toggle"><input type="checkbox" ${app.enabled ? 'checked' : ''} onchange="toggleApp('${app.id}')"><span class="toggle-slider"></span></label>
+                    <button class="btn btn-outline btn-sm btn-icon" onclick="removeApp('${app.id}')" title="Eliminar">✕</button>
+                </div>
+            </div>
+        `).join('');
+            document.getElementById('apps-count').textContent = apps.filter(a => a.enabled).length;
+            document.getElementById('s-apps').textContent = apps.filter(a => a.enabled).length;
+        }
+
+        function renderUsers() {
+            const tbody = document.getElementById('users-table');
+            const empty = document.getElementById('users-empty');
+            if (users.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+            empty.style.display = 'none';
+            tbody.innerHTML = users.map(u => `
+            <tr>
+                <td><strong>${u.username}</strong></td>
+                <td>${u.full_name || '-'}</td>
+                <td><span class="badge ${u.is_active ? 'badge-success' : 'badge-danger'}">${u.is_active ? 'Activo' : 'Inactivo'}</span></td>
+                <td>${u.last_login || 'Nunca'}</td>
+                <td>${u.apps_allowed || 'Todas'}</td>
+                <td>
+                    <button class="btn btn-outline btn-sm" onclick="toggleUser('${u.id}')">${u.is_active ? 'Desactivar' : 'Activar'}</button>
+                    <button class="btn btn-danger btn-sm" onclick="removeUser('${u.id}')">Eliminar</button>
+                </td>
+            </tr>
+        `).join('');
+            document.getElementById('users-count').textContent = users.length;
+        }
+
+        function renderSessions() {
+            const tbody = document.getElementById('sessions-table');
+            const empty = document.getElementById('sessions-empty');
+            if (sessions.length === 0) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+            empty.style.display = 'none';
+            tbody.innerHTML = sessions.map(s => `
+            <tr>
+                <td>${s.username}</td>
+                <td>${s.app_name}</td>
+                <td>${s.duration}</td>
+                <td>${s.ip}</td>
+                <td><span class="badge badge-success">● Conectado</span></td>
+                <td><button class="btn btn-danger btn-sm" onclick="disconnectSession('${s.id}')">Desconectar</button></td>
+            </tr>
+        `).join('');
+        }
+
+        /* ═══════════════ APPS ═══════════════ */
+        function toggleApp(id) { const a = apps.find(x => x.id === id); if (a) { a.enabled = !a.enabled; renderApps(); toast(a.name + (a.enabled ? ' habilitada' : ' deshabilitada'), 'success'); } }
+        function removeApp(id) { if (confirm('¿Eliminar esta aplicación?')) { apps = apps.filter(x => x.id !== id); renderApps(); toast('Aplicación eliminada', 'success'); } }
+        function openAddAppModal() { document.getElementById('modal-add-app').classList.add('active'); }
+        function addApp() {
+            const name = document.getElementById('new-app-name').value.trim();
+            if (!name) { toast('Ingresa un nombre', 'error'); return; }
+            apps.push({
+                id: Date.now().toString(),
+                name,
+                type: document.getElementById('new-app-type').value,
+                protocol: document.getElementById('new-app-protocol').value,
+                description: document.getElementById('new-app-desc').value || name,
+                image: document.getElementById('new-app-image').value || 'custom:latest',
+                enabled: true
+            });
+            closeModal('modal-add-app');
+            renderApps();
+            toast('Aplicación "' + name + '" agregada', 'success');
+        }
+
+        /* ═══════════════ USERS ═══════════════ */
+        function toggleUser(id) { const u = users.find(x => x.id === id); if (u) { u.is_active = !u.is_active; renderUsers(); toast(u.username + (u.is_active ? ' activado' : ' desactivado'), 'success'); } }
+        function removeUser(id) { if (confirm('¿Eliminar este usuario?')) { users = users.filter(x => x.id !== id); renderUsers(); toast('Usuario eliminado', 'success'); } }
+        function openAddUserModal() { document.getElementById('modal-add-user').classList.add('active'); }
+        function addUser() {
+            const username = document.getElementById('new-user-name').value.trim();
+            if (!username) { toast('Ingresa un nombre de usuario', 'error'); return; }
+            users.push({
+                id: Date.now().toString(),
+                username,
+                full_name: document.getElementById('new-user-fullname').value,
+                email: document.getElementById('new-user-email').value,
+                is_active: true,
+                last_login: null,
+                apps_allowed: 'Todas'
+            });
+            closeModal('modal-add-user');
+            renderUsers();
+            toast('Usuario "' + username + '" creado', 'success');
+        }
+
+        /* ═══════════════ SESSIONS ═══════════════ */
+        function disconnectSession(id) { sessions = sessions.filter(x => x.id !== id); renderSessions(); toast('Sesión desconectada', 'success'); }
+        function disconnectAll() { if (confirm('¿Desconectar todas las sesiones?')) { sessions = []; renderSessions(); toast('Todas las sesiones desconectadas', 'success'); } }
+
+        /* ═══════════════ RAILWAY ═══════════════ */
+        async function connectRailway() {
+            const url = document.getElementById('cfg-railway-url').value || prompt('Ingresa la URL de tu Railway API:', 'https://erp-api-production-6448.up.railway.app');
+            if (!url) return;
+            document.getElementById('cfg-railway-url').value = url;
+            try {
+                const r = await fetch(url + '/health');
+                if (r.ok) {
+                    document.getElementById('s-railway').textContent = 'Online';
+                    document.getElementById('s-railway').className = 'stat-value success';
+                    document.getElementById('s-railway-url').textContent = url;
+                    document.getElementById('railway-connect-btn').textContent = '☁️ Conectado';
+                    document.getElementById('railway-connect-btn').className = 'btn btn-success btn-sm';
+                    toast('Conectado a Railway exitosamente', 'success');
+                    await syncUsersFromRailway(url);
+                } else { throw new Error('No responde'); }
+            } catch (e) {
+                document.getElementById('s-railway').textContent = 'Error';
+                document.getElementById('s-railway').className = 'stat-value danger';
+                toast('No se pudo conectar a Railway: ' + e.message, 'error');
+            }
+        }
+
+        async function testRailwayConnection() {
+            const url = document.getElementById('cfg-railway-url').value;
+            if (!url) { toast('Ingresa una URL primero', 'error'); return; }
+            try { const r = await fetch(url + '/health'); toast(r.ok ? '✅ Conexión exitosa' : '❌ Sin respuesta', r.ok ? 'success' : 'error'); }
+            catch (e) { toast('❌ Error: ' + e.message, 'error'); }
+        }
+
+        async function syncUsersFromRailway(url) {
+            try {
+                const r = await fetch(url + '/api/system/stats');
+                if (r.ok) { const data = await r.json(); document.getElementById('s-sessions').textContent = data.active_sessions || 0; }
+            } catch (e) { console.warn('Sync error:', e); }
+        }
+
+        /* ═══════════════ STATS ═══════════════ */
+        async function refreshAll() {
+            try {
+                const r = await fetch(API + '/api/stats');
+                if (r.ok) {
+                    const s = await r.json();
+                    document.getElementById('s-containers').textContent = s.active_containers || 0;
+                    document.getElementById('s-sessions').textContent = s.total_sessions || 0;
+                    document.getElementById('s-latency').textContent = (s.avg_latency || 0);
+                    document.getElementById('s-bandwidth').textContent = (s.bandwidth || 0);
+                }
+            } catch (e) { /* Server not running */ }
+        }
+
+        /* ═══════════════ STREAMING ═══════════════ */
+        document.getElementById('opt-bitrate').addEventListener('input', e => { document.getElementById('opt-bitrate-val').textContent = e.target.value + ' kbps'; });
+        function saveStreamingSettings() {
+            const cfg = {
+                resolution: document.getElementById('opt-resolution').value,
+                fps: +document.getElementById('opt-fps').value,
+                bitrate: +document.getElementById('opt-bitrate').value,
+                codec: document.getElementById('opt-codec').value,
+                hwAccel: document.getElementById('opt-hwaccel').checked,
+                lowLatency: document.getElementById('opt-lowlatency').checked,
+                protocol: document.getElementById('opt-protocol').value,
+                autoReconnect: document.getElementById('opt-reconnect').checked,
+                adaptiveBitrate: document.getElementById('opt-adaptive').checked
+            };
+            localStorage.setItem('cpanel_streaming', JSON.stringify(cfg));
+            toast('Configuración de streaming guardada', 'success');
+        }
+
+        /* ═══════════════ SETTINGS ═══════════════ */
+        function saveAllSettings() {
+            const cfg = {
+                railwayUrl: document.getElementById('cfg-railway-url').value,
+                port: +document.getElementById('cfg-port').value,
+                maxContainers: +document.getElementById('cfg-max-containers').value,
+                maxPerUser: +document.getElementById('cfg-max-per-user').value,
+                ssl: document.getElementById('cfg-ssl').checked,
+                biometric: document.getElementById('cfg-biometric').checked,
+                deviceLock: document.getElementById('cfg-device-lock').checked
+            };
+            localStorage.setItem('cpanel_settings', JSON.stringify(cfg));
+            toast('Configuración guardada correctamente', 'success');
+        }
+
+        /* ═══════════════ MODALS ═══════════════ */
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+        });
+
+        /* ═══════════════ TOAST ═══════════════ */
+        function toast(msg, type = 'info') {
+            const w = document.getElementById('toast-wrap');
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.textContent = msg;
+            w.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(40px)'; setTimeout(() => t.remove(), 300); }, 3500);
+        }
+
+        /* ═══════════════ INIT ═══════════════ */
+        renderApps();
+        renderUsers();
+        renderSessions();
+        refreshAll();
+        setInterval(refreshAll, 5000);
+
+        // Load saved settings
+        const savedSettings = JSON.parse(localStorage.getItem('cpanel_settings') || '{}');
+        if (savedSettings.railwayUrl) document.getElementById('cfg-railway-url').value = savedSettings.railwayUrl;
+        if (savedSettings.port) document.getElementById('cfg-port').value = savedSettings.port;
+    </script>
+</body>
+
+</html>

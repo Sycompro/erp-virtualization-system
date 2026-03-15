@@ -1,9 +1,0 @@
-RAILWAY DEPLOYMENT TRIGGER
-========================
-
-Timestamp: 2024-12-28 15:30:00
-Action: Force Railway deployment via GitHub Desktop
-Repository: Sycompro/erp-virtualization-system
-Status: Ready for deployment
-
-This file triggers Railway webhook for automatic deployment.

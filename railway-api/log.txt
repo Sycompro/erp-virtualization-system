@@ -1,0 +1,26 @@
+Conectado a la base de datos de Railway.
+Nuevo Hash: $2b$10$bBbSylCbQCSl3M6PR74jReOrjldkfKih1yCspzFgC3J2Jr7nQkblm
+error: record "new" has no field "last_activity"
+    at C:\Users\Administrador\Desktop\APP VIRTUAL\railway-api\node_modules\pg\lib\client.js:631:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async run (C:\Users\Administrador\Desktop\APP VIRTUAL\railway-api\fix_passwords.js:16:17) {
+  length: 243,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: 'PL/pgSQL assignment "NEW.last_activity = CURRENT_TIMESTAMP"\n' +
+    'PL/pgSQL function update_last_activity() line 3 at assignment',
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'pl_exec.c',
+  line: '5587',
+  routine: 'plpgsql_exec_get_datum_type_info'
+}
+^C
