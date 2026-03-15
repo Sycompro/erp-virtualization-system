@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Virtualization - Panel de Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #475569;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1e293b 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: var(--bg-secondary);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        .badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-success {
+            background: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }
+
+        .badge-warning {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--warning);
+        }
+
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .slider-container {
+            margin-top: 8px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-card);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-value {
+            display: inline-block;
+            margin-left: 12px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-card);
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .switch-slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .switch-slider:before {
+            transform: translateX(24px);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-block {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .container-list {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .container-item {
+            background: var(--bg-card);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .container-info h3 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .container-info p {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .container-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-info {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+        }
+
+        .alert-success {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🖥️ ERP Virtualization Control Panel</h1>
+            <p>Configuración de visualización y gestión de contenedores</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="activeContainers">0</div>
+                <div class="stat-label">Contenedores Activos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalSessions">0</div>
+                <div class="stat-label">Sesiones Totales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgLatency">--</div>
+                <div class="stat-label">Latencia Promedio</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="bandwidth">--</div>
+                <div class="stat-label">Ancho de Banda</div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="grid">
+            <!-- Video Quality Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🎥</span>
+                        Calidad de Video
+                    </div>
+                    <span class="badge badge-success">Activo</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Resolución</label>
+                    <select class="form-control" id="resolution">
+                        <option value="1280x720">1280x720 (HD)</option>
+                        <option value="1920x1080" selected>1920x1080 (Full HD)</option>
+                        <option value="2560x1440">2560x1440 (2K)</option>
+                        <option value="3840x2160">3840x2160 (4K)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Tasa de Frames (FPS)</label>
+                    <select class="form-control" id="fps">
+                        <option value="30">30 FPS</option>
+                        <option value="60" selected>60 FPS</option>
+                        <option value="120">120 FPS</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Bitrate
+                        <span class="slider-value" id="bitrateValue">5000 kbps</span>
+                    </label>
+                    <input type="range" class="slider" id="bitrate" min="1000" max="15000" value="5000" step="500">
+                </div>
+
+                <button class="btn btn-primary btn-block" onclick="applyVideoSettings()">
+                    💾 Aplicar Configuración
+                </button>
+            </div>
+
+            <!-- Performance Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>⚡</span>
+                        Rendimiento
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Codec de Video</label>
+                    <select class="form-control" id="codec">
+                        <option value="h264" selected>H.264 (Compatibilidad)</option>
+                        <option value="h265">H.265 (Eficiencia)</option>
+                        <option value="vp9">VP9 (WebRTC)</option>
+                        <option value="av1">AV1 (Futuro)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Calidad de Compresión
+                        <span class="slider-value" id="qualityValue">75%</span>
+                    </label>
+                    <input type="range" class="slider" id="quality" min="0" max="100" value="75">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Aceleración por Hardware</span>
+                        <label class="switch">
+                            <input type="checkbox" id="hwAccel" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Modo Baja Latencia</span>
+                        <label class="switch">
+                            <input type="checkbox" id="lowLatency" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Network Settings -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>🌐</span>
+                        Red y Conexión
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Protocolo de Transporte</label>
+                    <select class="form-control" id="transport">
+                        <option value="webrtc" selected>WebRTC (Recomendado)</option>
+                        <option value="websocket">WebSocket</option>
+                        <option value="tcp">TCP Directo</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        Buffer de Red (ms)
+                        <span class="slider-value" id="bufferValue">100 ms</span>
+                    </label>
+                    <input type="range" class="slider" id="buffer" min="0" max="500" value="100" step="50">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Reconexión Automática</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoReconnect" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>Adaptación Dinámica</span>
+                        <label class="switch">
+                            <input type="checkbox" id="adaptiveBitrate" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Containers -->
+        <div class="container-list">
+            <h2 style="margin-bottom: 16px;">📦 Contenedores Activos</h2>
+            <div id="containersList">
+                <div class="alert alert-info">
+                    <span>ℹ️</span>
+                    <span>No hay contenedores activos. Inicia una sesión desde la app móvil.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid">
+            <button class="btn btn-success btn-block" onclick="saveAllSettings()">
+                ✅ Guardar Toda la Configuración
+            </button>
+            <button class="btn btn-danger btn-block" onclick="resetSettings()">
+                🔄 Restablecer a Valores Predeterminados
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Update slider values in real-time
+        document.getElementById('bitrate').addEventListener('input', function(e) {
+            document.getElementById('bitrateValue').textContent = e.target.value + ' kbps';
+        });
+
+        document.getElementById('quality').addEventListener('input', function(e) {
+            document.getElementById('qualityValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('buffer').addEventListener('input', function(e) {
+            document.getElementById('bufferValue').textContent = e.target.value + ' ms';
+        });
+
+        // Apply video settings
+        async function applyVideoSettings() {
+            const settings = {
+                resolution: document.getElementById('resolution').value,
+                fps: parseInt(document.getElementById('fps').value),
+                bitrate: parseInt(document.getElementById('bitrate').value)
+            };
+
+            // Simular guardado exitoso
+            showNotification('✅ Configuración de video aplicada correctamente (DEMO)', 'success');
+            console.log('Video settings:', settings);
+        }
+
+        // Save all settings
+        async function saveAllSettings() {
+            const settings = {
+                video: {
+                    resolution: document.getElementById('resolution').value,
+                    fps: parseInt(document.getElementById('fps').value),
+                    bitrate: parseInt(document.getElementById('bitrate').value)
+                },
+                performance: {
+                    codec: document.getElementById('codec').value,
+                    quality: parseInt(document.getElementById('quality').value),
+                    hwAccel: document.getElementById('hwAccel').checked,
+                    lowLatency: document.getElementById('lowLatency').checked
+                },
+                network: {
+                    transport: document.getElementById('transport').value,
+                    buffer: parseInt(document.getElementById('buffer').value),
+                    autoReconnect: document.getElementById('autoReconnect').checked,
+                    adaptiveBitrate: document.getElementById('adaptiveBitrate').checked
+                }
+            };
+
+            // Simular guardado exitoso
+            showNotification('✅ Toda la configuración guardada correctamente (DEMO)', 'success');
+            console.log('All settings:', settings);
+        }
+
+        // Reset settings
+        function resetSettings() {
+            if (confirm('¿Estás seguro de restablecer toda la configuración?')) {
+                document.getElementById('resolution').value = '1920x1080';
+                document.getElementById('fps').value = '60';
+                document.getElementById('bitrate').value = '5000';
+                document.getElementById('codec').value = 'h264';
+                document.getElementById('quality').value = '75';
+                document.getElementById('hwAccel').checked = true;
+                document.getElementById('lowLatency').checked = true;
+                document.getElementById('transport').value = 'webrtc';
+                document.getElementById('buffer').value = '100';
+                document.getElementById('autoReconnect').checked = true;
+                document.getElementById('adaptiveBitrate').checked = true;
+
+                // Update slider displays
+                document.getElementById('bitrateValue').textContent = '5000 kbps';
+                document.getElementById('qualityValue').textContent = '75%';
+                document.getElementById('bufferValue').textContent = '100 ms';
+
+                showNotification('🔄 Configuración restablecida', 'success');
+            }
+        }
+
+        // Show notification
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+            notification.style.position = 'fixed';
+            notification.style.top = '20px';
+            notification.style.right = '20px';
+            notification.style.zIndex = '1000';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Load stats
+        async function loadStats() {
+            try {
+                // Simular datos para demo
+                const stats = {
+                    active_containers: 2,
+                    total_sessions: 5,
+                    avg_latency: 25,
+                    bandwidth: 15.5
+                };
+                
+                document.getElementById('activeContainers').textContent = stats.active_containers || 0;
+                document.getElementById('totalSessions').textContent = stats.total_sessions || 0;
+                document.getElementById('avgLatency').textContent = (stats.avg_latency || 0) + ' ms';
+                document.getElementById('bandwidth').textContent = (stats.bandwidth || 0) + ' Mbps';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                // Usar datos por defecto
+                document.getElementById('activeContainers').textContent = '2';
+                document.getElementById('totalSessions').textContent = '5';
+                document.getElementById('avgLatency').textContent = '25 ms';
+                document.getElementById('bandwidth').textContent = '15.5 Mbps';
+            }
+        }
+
+        // Load containers
+        async function loadContainers() {
+            try {
+                // Simular contenedores para demo
+                const containers = [
+                    {
+                        container_id: 'sap-container-001',
+                        erp_type: 'sap',
+                        user_id: 'tablet1',
+                        status: 'running'
+                    },
+                    {
+                        container_id: 'office-container-002',
+                        erp_type: 'office', 
+                        user_id: 'tablet2',
+                        status: 'running'
+                    }
+                ];
+                
+                const containersList = document.getElementById('containersList');
+                
+                if (containers.length === 0) {
+                    containersList.innerHTML = `
+                        <div class="alert alert-info">
+                            <span>ℹ️</span>
+                            <span>No hay contenedores activos. Inicia una sesión desde la app móvil.</span>
+                        </div>
+                    `;
+                } else {
+                    containersList.innerHTML = containers.map(c => `
+                        <div class="container-item">
+                            <div class="container-info">
+                                <h3>${c.erp_type.toUpperCase()} - ${c.container_id.substring(0, 12)}</h3>
+                                <p>Usuario: ${c.user_id} | Estado: ${c.status}</p>
+                            </div>
+                            <div class="container-actions">
+                                <button class="btn btn-sm btn-primary" onclick="viewContainer('${c.container_id}')">Ver</button>
+                                <button class="btn btn-sm btn-danger" onclick="stopContainer('${c.container_id}')">Detener</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading containers:', error);
+            }
+        }
+
+        // Stop container
+        async function stopContainer(containerId) {
+            if (confirm('¿Detener este contenedor?')) {
+                // Simular detención exitosa
+                showNotification('✅ Contenedor detenido (DEMO)', 'success');
+                console.log('Stopping container:', containerId);
+                
+                // Recargar contenedores después de 1 segundo
+                setTimeout(() => {
+                    loadContainers();
+                    loadStats();
+                }, 1000);
+            }
+        }
+
+        // View container (nueva función)
+        function viewContainer(containerId) {
+            showNotification('🔍 Abriendo vista del contenedor (DEMO)', 'success');
+            console.log('Viewing container:', containerId);
+        }
+
+        // Initialize
+        loadStats();
+        loadContainers();
+        setInterval(loadStats, 5000);
+        setInterval(loadContainers, 10000);
+    </script>
+</body>
+</html>
