@@ -3,8 +3,6 @@ use anyhow::Result;
 use uuid::Uuid;
 use crate::models::{User, UserSession, Application, SystemStats};
 
-mod migrations;
-
 pub struct DatabaseService {
     pool: PgPool,
 }
@@ -21,7 +19,7 @@ impl DatabaseService {
         // sqlx::migrate!("./database/migrations").run(&pool).await?;
         
         // Ejecutar inicialización de base de datos si es necesario
-        migrations::run_migrations_if_needed(&pool).await?;
+        Self::run_migrations_if_needed(&pool).await?;
         
         Ok(Self { pool })
     }
@@ -232,5 +230,42 @@ impl DatabaseService {
             available_applications: row.3,
             activities_last_24h: row.4,
         })
+    }
+
+    async fn run_migrations_if_needed(pool: &PgPool) -> Result<()> {
+        // Check if users table exists
+        let table_exists: bool = sqlx::query_scalar(
+            "SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'users'
+            )"
+        )
+        .fetch_one(pool)
+        .await?;
+
+        if !table_exists {
+            tracing::info!("Running database initialization...");
+            
+            // Run the initialization SQL directly (embedded in binary)
+            let init_sql = include_str!("../../../database/init.sql");
+            
+            // Split and execute SQL statements
+            for statement in init_sql.split(';') {
+                let statement = statement.trim();
+                if !statement.is_empty() && !statement.starts_with("--") && !statement.starts_with("/*") {
+                    if let Err(e) = sqlx::query(statement).execute(pool).await {
+                        // Log error but continue (some statements might fail due to IF NOT EXISTS)
+                        tracing::warn!("SQL statement failed (this might be expected): {}", e);
+                    }
+                }
+            }
+            
+            tracing::info!("Database initialization completed");
+        } else {
+            tracing::info!("Database already initialized, skipping migrations");
+        }
+
+        Ok(())
     }
 }
