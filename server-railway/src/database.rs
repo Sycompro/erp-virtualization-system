@@ -247,19 +247,144 @@ impl DatabaseService {
         if !table_exists {
             tracing::info!("Running database initialization...");
             
-            // Run the initialization SQL directly (embedded in binary)
-            let init_sql = include_str!("../../../database/init.sql");
+            // Create extensions
+            let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").execute(pool).await;
+            let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"").execute(pool).await;
             
-            // Split and execute SQL statements
-            for statement in init_sql.split(';') {
-                let statement = statement.trim();
-                if !statement.is_empty() && !statement.starts_with("--") && !statement.starts_with("/*") {
-                    if let Err(e) = sqlx::query(statement).execute(pool).await {
-                        // Log error but continue (some statements might fail due to IF NOT EXISTS)
-                        tracing::warn!("SQL statement failed (this might be expected): {}", e);
-                    }
-                }
+            // Create users table
+            sqlx::query("
+                CREATE TABLE IF NOT EXISTS users (
+                    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                    username VARCHAR(50) UNIQUE NOT NULL,
+                    email VARCHAR(100) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    full_name VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_login TIMESTAMP,
+                    is_active BOOLEAN DEFAULT true,
+                    failed_login_attempts INTEGER DEFAULT 0,
+                    locked_until TIMESTAMP NULL
+                )
+            ").execute(pool).await?;
+            
+            // Create user_sessions table
+            sqlx::query("
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                    session_token VARCHAR(255) UNIQUE NOT NULL,
+                    device_id VARCHAR(100),
+                    device_info JSONB,
+                    ip_address INET,
+                    user_agent TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP NOT NULL,
+                    is_active BOOLEAN DEFAULT true
+                )
+            ").execute(pool).await?;
+            
+            // Create applications table
+            sqlx::query("
+                CREATE TABLE IF NOT EXISTS applications (
+                    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                    name VARCHAR(100) NOT NULL,
+                    app_type VARCHAR(50) NOT NULL,
+                    category VARCHAR(50) NOT NULL,
+                    description TEXT,
+                    image_name VARCHAR(200) NOT NULL,
+                    display_protocol VARCHAR(20) NOT NULL DEFAULT 'VNC',
+                    default_port INTEGER,
+                    icon_url VARCHAR(255),
+                    system_requirements JSONB,
+                    supported_features JSONB,
+                    is_active BOOLEAN DEFAULT true,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ").execute(pool).await?;
+            
+            // Create active_containers table
+            sqlx::query("
+                CREATE TABLE IF NOT EXISTS active_containers (
+                    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                    container_id VARCHAR(100) UNIQUE NOT NULL,
+                    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+                    session_id UUID REFERENCES user_sessions(id) ON DELETE CASCADE,
+                    application_id UUID REFERENCES applications(id),
+                    app_type VARCHAR(50) NOT NULL,
+                    status VARCHAR(20) DEFAULT 'starting',
+                    vnc_port INTEGER,
+                    rdp_port INTEGER,
+                    container_ip INET,
+                    resources_allocated JSONB,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    started_at TIMESTAMP,
+                    stopped_at TIMESTAMP,
+                    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ").execute(pool).await?;
+            
+            // Create activity_logs table
+            sqlx::query("
+                CREATE TABLE IF NOT EXISTS activity_logs (
+                    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+                    session_id UUID REFERENCES user_sessions(id) ON DELETE SET NULL,
+                    container_id UUID REFERENCES active_containers(id) ON DELETE SET NULL,
+                    action VARCHAR(50) NOT NULL,
+                    details JSONB,
+                    ip_address INET,
+                    user_agent TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ").execute(pool).await?;
+            
+            // Create system_config table
+            sqlx::query("
+                CREATE TABLE IF NOT EXISTS system_config (
+                    key VARCHAR(100) PRIMARY KEY,
+                    value JSONB NOT NULL,
+                    description TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_by UUID REFERENCES users(id)
+                )
+            ").execute(pool).await?;
+            
+            // Create indexes
+            let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)").execute(pool).await;
+            let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)").execute(pool).await;
+            let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(session_token)").execute(pool).await;
+            let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_sessions_active ON user_sessions(is_active)").execute(pool).await;
+            
+            // Insert admin user (password: admin123)
+            let _ = sqlx::query("
+                INSERT INTO users (username, email, password_hash, full_name) VALUES
+                ('admin', 'admin@erpvirtualization.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj3bp.Gm.F5e', 'Administrador del Sistema')
+                ON CONFLICT (username) DO NOTHING
+            ").execute(pool).await;
+            
+            // Insert tablet users
+            for i in 1..=5 {
+                let _ = sqlx::query(&format!("
+                    INSERT INTO users (username, email, password_hash, full_name) VALUES
+                    ('tablet{}', 'tablet{}@empresa.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj3bp.Gm.F5e', 'Usuario Tablet {}')
+                    ON CONFLICT (username) DO NOTHING
+                ", i, i, i)).execute(pool).await;
             }
+            
+            // Insert sample applications
+            let _ = sqlx::query("
+                INSERT INTO applications (name, app_type, category, description, image_name, display_protocol, default_port, system_requirements, supported_features) VALUES
+                ('SAP GUI', 'sap', 'ERP Systems', 'Sistema ERP empresarial SAP con interfaz completa', 'erp-virtualization/sap-gui:latest', 'VNC', 5900, 
+                 '{\"min_ram_gb\": 4, \"recommended_ram_gb\": 8, \"gpu_required\": false}',
+                 '[\"Streaming HD\", \"Touch optimizado\", \"Clipboard sync\"]'),
+                ('Microsoft Office', 'office', 'Office Suite', 'Word, Excel, PowerPoint, Outlook completos', 'erp-virtualization/office:latest', 'RDP', 3389,
+                 '{\"min_ram_gb\": 2, \"recommended_ram_gb\": 4, \"gpu_required\": false}',
+                 '[\"Streaming HD\", \"Touch optimizado\", \"Clipboard sync\"]')
+                ON CONFLICT (name) DO NOTHING
+            ").execute(pool).await;
             
             tracing::info!("Database initialization completed");
         } else {
