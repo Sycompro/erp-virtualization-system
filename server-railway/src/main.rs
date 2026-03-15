@@ -1,5 +1,5 @@
 use axum::{
-    extract::{State, Query},
+    extract::State,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
@@ -8,8 +8,8 @@ use axum::{
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::cors::CorsLayer;
-use tracing::{info, error};
-use serde::{Deserialize, Serialize};
+use tracing::info;
+use serde::Deserialize;
 
 mod auth;
 mod database;
@@ -128,11 +128,10 @@ async fn validate_token(
 }
 
 async fn get_user_profile(
-    State(state): State<AppState>,
-    // TODO: Extraer token del header Authorization
+    State(_state): State<AppState>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // Implementar extracción de usuario desde JWT
-    Err(StatusCode::NOT_IMPLEMENTED)
+    // TODO: Implementar extracción de usuario desde JWT
+    Err::<Json<serde_json::Value>, StatusCode>(StatusCode::NOT_IMPLEMENTED)
 }
 
 async fn list_applications(

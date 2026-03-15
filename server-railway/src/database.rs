@@ -1,4 +1,4 @@
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use anyhow::Result;
 use uuid::Uuid;
 use crate::models::{User, UserSession, Application, SystemStats};

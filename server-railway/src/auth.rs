@@ -3,7 +3,6 @@ use anyhow::Result;
 use bcrypt::{hash, verify, DEFAULT_COST};
 use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use chrono::{Utc, Duration};
 use crate::database::DatabaseService;
 use crate::models::{User, AuthResponse};
@@ -91,7 +90,7 @@ impl AuthService {
     pub async fn validate_token(&self, token: String) -> Result<User> {
         // Validar JWT
         let validation = Validation::new(Algorithm::HS256);
-        let token_data = decode::<Claims>(
+        let _token_data = decode::<Claims>(
             &token,
             &DecodingKey::from_secret(self.jwt_secret.as_ref()),
             &validation,
