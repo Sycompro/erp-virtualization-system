@@ -1,0 +1,31 @@
+{
+  "db": "PostgreSQL",
+  "queries": {
+    "0a1b2c3d4e5f6789": {
+      "query": "SELECT id, username, email, full_name, created_at, last_login, is_active FROM users WHERE username = $1 AND is_active = true",
+      "describe": {
+        "columns": [
+          {"ordinal": 0, "name": "id", "type_info": "Uuid"},
+          {"ordinal": 1, "name": "username", "type_info": "Varchar"},
+          {"ordinal": 2, "name": "email", "type_info": "Varchar"},
+          {"ordinal": 3, "name": "full_name", "type_info": "Varchar"},
+          {"ordinal": 4, "name": "created_at", "type_info": "Timestamptz"},
+          {"ordinal": 5, "name": "last_login", "type_info": "Timestamptz"},
+          {"ordinal": 6, "name": "is_active", "type_info": "Bool"}
+        ],
+        "parameters": {"Left": ["Varchar"]},
+        "nullable": [false, false, false, true, false, true, false]
+      }
+    },
+    "1a2b3c4d5e6f7890": {
+      "query": "SELECT password_hash FROM users WHERE username = $1 AND is_active = true",
+      "describe": {
+        "columns": [
+          {"ordinal": 0, "name": "password_hash", "type_info": "Varchar"}
+        ],
+        "parameters": {"Left": ["Varchar"]},
+        "nullable": [false]
+      }
+    }
+  }
+}

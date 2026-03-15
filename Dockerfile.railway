@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copiar manifiestos de Cargo
-COPY server/Cargo.toml server/Cargo.lock ./
+COPY server-railway/Cargo.toml ./
 
 # Crear src dummy para cachear dependencias
 RUN mkdir src && echo "fn main() {}" > src/main.rs
@@ -21,7 +21,8 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release && rm -rf src
 
 # Copiar código fuente real
-COPY server/src ./src
+COPY server-railway/src ./src
+COPY database ./database
 
 # Construir aplicación final
 RUN cargo build --release
@@ -42,8 +43,8 @@ RUN apt-get update && apt-get install -y \
 RUN useradd -r -s /bin/false -m -d /app railway-user
 
 # Copiar binario
-COPY --from=builder /app/target/release/erp-virtualization-server /app/
-RUN chown railway-user:railway-user /app/erp-virtualization-server
+COPY --from=builder /app/target/release/erp-railway-api /app/
+RUN chown railway-user:railway-user /app/erp-railway-api
 
 # Cambiar a usuario no-root
 USER railway-user
@@ -61,4 +62,4 @@ ENV RUST_LOG=info
 ENV RAILWAY_ENVIRONMENT=production
 
 # Comando de inicio
-CMD ["./erp-virtualization-server"]
+CMD ["./erp-railway-api"]
