@@ -9,17 +9,23 @@ pub struct DatabaseService {
 
 impl DatabaseService {
     pub async fn new() -> Result<Self> {
+        tracing::info!("🔌 Conectando a la base de datos...");
+        
         let database_url = std::env::var("DATABASE_URL")
-            .expect("DATABASE_URL debe estar configurada");
+            .map_err(|_| anyhow::anyhow!("DATABASE_URL no está configurada"))?;
         
-        let pool = PgPool::connect(&database_url).await?;
+        tracing::info!("📊 URL de base de datos configurada");
         
-        // Ejecutar migraciones si es necesario (deshabilitado para Railway)
-        // Las migraciones se ejecutarán manualmente o via Railway CLI
-        // sqlx::migrate!("./database/migrations").run(&pool).await?;
+        let pool = PgPool::connect(&database_url).await
+            .map_err(|e| anyhow::anyhow!("Error conectando a PostgreSQL: {}", e))?;
+        
+        tracing::info!("✅ Conexión a PostgreSQL establecida");
         
         // Ejecutar inicialización de base de datos si es necesario
-        Self::run_migrations_if_needed(&pool).await?;
+        Self::run_migrations_if_needed(&pool).await
+            .map_err(|e| anyhow::anyhow!("Error en inicialización de BD: {}", e))?;
+        
+        tracing::info!("🎯 DatabaseService inicializado correctamente");
         
         Ok(Self { pool })
     }
@@ -233,6 +239,8 @@ impl DatabaseService {
     }
 
     async fn run_migrations_if_needed(pool: &PgPool) -> Result<()> {
+        tracing::info!("🔍 Verificando estado de la base de datos...");
+        
         // Check if users table exists
         let table_exists: bool = sqlx::query_scalar(
             "SELECT EXISTS (
@@ -242,16 +250,19 @@ impl DatabaseService {
             )"
         )
         .fetch_one(pool)
-        .await?;
+        .await
+        .map_err(|e| anyhow::anyhow!("Error verificando tablas existentes: {}", e))?;
 
         if !table_exists {
-            tracing::info!("Running database initialization...");
+            tracing::info!("🏗️  Inicializando base de datos (primera vez)...");
             
             // Create extensions
+            tracing::info!("📦 Creando extensiones PostgreSQL...");
             let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"").execute(pool).await;
             let _ = sqlx::query("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"").execute(pool).await;
             
             // Create users table
+            tracing::info!("👥 Creando tabla users...");
             sqlx::query("
                 CREATE TABLE IF NOT EXISTS users (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -266,9 +277,11 @@ impl DatabaseService {
                     failed_login_attempts INTEGER DEFAULT 0,
                     locked_until TIMESTAMP NULL
                 )
-            ").execute(pool).await?;
+            ").execute(pool).await
+            .map_err(|e| anyhow::anyhow!("Error creando tabla users: {}", e))?;
             
             // Create user_sessions table
+            tracing::info!("🔐 Creando tabla user_sessions...");
             sqlx::query("
                 CREATE TABLE IF NOT EXISTS user_sessions (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -283,9 +296,11 @@ impl DatabaseService {
                     expires_at TIMESTAMP NOT NULL,
                     is_active BOOLEAN DEFAULT true
                 )
-            ").execute(pool).await?;
+            ").execute(pool).await
+            .map_err(|e| anyhow::anyhow!("Error creando tabla user_sessions: {}", e))?;
             
             // Create applications table
+            tracing::info!("📱 Creando tabla applications...");
             sqlx::query("
                 CREATE TABLE IF NOT EXISTS applications (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -303,9 +318,11 @@ impl DatabaseService {
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            ").execute(pool).await?;
+            ").execute(pool).await
+            .map_err(|e| anyhow::anyhow!("Error creando tabla applications: {}", e))?;
             
             // Create active_containers table
+            tracing::info!("🐳 Creando tabla active_containers...");
             sqlx::query("
                 CREATE TABLE IF NOT EXISTS active_containers (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -324,9 +341,11 @@ impl DatabaseService {
                     stopped_at TIMESTAMP,
                     last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            ").execute(pool).await?;
+            ").execute(pool).await
+            .map_err(|e| anyhow::anyhow!("Error creando tabla active_containers: {}", e))?;
             
             // Create activity_logs table
+            tracing::info!("📋 Creando tabla activity_logs...");
             sqlx::query("
                 CREATE TABLE IF NOT EXISTS activity_logs (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -339,9 +358,11 @@ impl DatabaseService {
                     user_agent TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            ").execute(pool).await?;
+            ").execute(pool).await
+            .map_err(|e| anyhow::anyhow!("Error creando tabla activity_logs: {}", e))?;
             
             // Create system_config table
+            tracing::info!("⚙️  Creando tabla system_config...");
             sqlx::query("
                 CREATE TABLE IF NOT EXISTS system_config (
                     key VARCHAR(100) PRIMARY KEY,
@@ -350,15 +371,18 @@ impl DatabaseService {
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_by UUID REFERENCES users(id)
                 )
-            ").execute(pool).await?;
+            ").execute(pool).await
+            .map_err(|e| anyhow::anyhow!("Error creando tabla system_config: {}", e))?;
             
             // Create indexes
+            tracing::info!("🔍 Creando índices...");
             let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)").execute(pool).await;
             let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)").execute(pool).await;
             let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_sessions_token ON user_sessions(session_token)").execute(pool).await;
             let _ = sqlx::query("CREATE INDEX IF NOT EXISTS idx_sessions_active ON user_sessions(is_active)").execute(pool).await;
             
             // Insert admin user (password: admin123)
+            tracing::info!("👤 Creando usuario administrador...");
             let _ = sqlx::query("
                 INSERT INTO users (username, email, password_hash, full_name) VALUES
                 ('admin', 'admin@erpvirtualization.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj3bp.Gm.F5e', 'Administrador del Sistema')
@@ -366,6 +390,7 @@ impl DatabaseService {
             ").execute(pool).await;
             
             // Insert tablet users
+            tracing::info!("📱 Creando usuarios de tablet...");
             for i in 1..=5 {
                 let _ = sqlx::query(&format!("
                     INSERT INTO users (username, email, password_hash, full_name) VALUES
@@ -375,6 +400,7 @@ impl DatabaseService {
             }
             
             // Insert sample applications
+            tracing::info!("🚀 Creando aplicaciones de ejemplo...");
             let _ = sqlx::query("
                 INSERT INTO applications (name, app_type, category, description, image_name, display_protocol, default_port, system_requirements, supported_features) VALUES
                 ('SAP GUI', 'sap', 'ERP Systems', 'Sistema ERP empresarial SAP con interfaz completa', 'erp-virtualization/sap-gui:latest', 'VNC', 5900, 
@@ -386,9 +412,9 @@ impl DatabaseService {
                 ON CONFLICT (name) DO NOTHING
             ").execute(pool).await;
             
-            tracing::info!("Database initialization completed");
+            tracing::info!("✅ Inicialización de base de datos completada exitosamente");
         } else {
-            tracing::info!("Database already initialized, skipping migrations");
+            tracing::info!("ℹ️  Base de datos ya inicializada, continuando...");
         }
 
         Ok(())
