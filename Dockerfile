@@ -1,54 +1,24 @@
-# Dockerfile para Railway - ERP API Service
-FROM rustlang/rust:nightly-slim as builder
+# Dockerfile mínimo - Solo panel estático
+FROM nginx:alpine
 
-# Instalar dependencias de compilación
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    libpq-dev \
-    build-essential \
-    && rm -rf /var/lib/apt/lists/*
+# Copiar panel HTML
+COPY server-railway/static/ /usr/share/nginx/html/
 
-WORKDIR /app
+# Configurar nginx para SPA
+RUN echo 'server { \
+    listen 8080; \
+    server_name _; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    location /health { \
+        return 200 "OK"; \
+        add_header Content-Type text/plain; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
 
-# Copiar todo el directorio server-railway
-COPY server-railway/ ./
+EXPOSE 8080
 
-# Construir aplicación
-RUN cargo build --release
-
-# Etapa de runtime
-FROM debian:bookworm-slim
-
-# Instalar dependencias de runtime
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl3 \
-    libpq5 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Crear usuario no-root
-RUN useradd -r -s /bin/false -m -d /app railway-user
-
-# Copiar binario
-COPY --from=builder /app/target/release/erp-railway-api /app/
-RUN chown railway-user:railway-user /app/erp-railway-api
-
-# Cambiar a usuario no-root
-USER railway-user
-WORKDIR /app
-
-# Railway automáticamente asigna PORT
-EXPOSE $PORT
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:$PORT/health || exit 1
-
-# Variables de entorno
-ENV RUST_LOG=info
-ENV RAILWAY_ENVIRONMENT=production
-
-# Comando de inicio
-CMD ["./erp-railway-api"]
+CMD ["nginx", "-g", "daemon off;"]
