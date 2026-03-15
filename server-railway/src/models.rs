@@ -59,3 +59,27 @@ pub struct SystemStats {
     pub available_applications: i64,
     pub activities_last_24h: i64,
 }
+
+/// PC/Agente registrado que puede ser virtualizado
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Agent {
+    pub id: Uuid,
+    pub name: String,
+    pub os: String,
+    pub version: String,
+    pub status: String, // "online" | "offline"
+    pub last_seen_at: DateTime<Utc>,
+    /// Hash del secreto compartido con el agente (no se guarda en texto plano)
+    pub secret_hash: String,
+}
+
+/// Sesión de virtualización (no confundir con UserSession de autenticación)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VirtualSession {
+    pub id: Uuid,
+    pub agent_id: Uuid,
+    pub user_id: Uuid,
+    pub status: String, // "starting" | "active" | "stopped"
+    pub created_at: DateTime<Utc>,
+    pub ended_at: Option<DateTime<Utc>>,
+}
