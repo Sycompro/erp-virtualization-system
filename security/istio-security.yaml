@@ -1,0 +1,164 @@
+# Istio Security Configuration
+# Zero Trust Network con mTLS automático
+
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: erp-mtls-strict
+  namespace: erp-system
+spec:
+  # Aplicar a todos los pods en el namespace
+  mtls:
+    mode: STRICT  # mTLS obligatorio para toda comunicación
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: erp-access-control
+  namespace: erp-system
+spec:
+  selector:
+    matchLabels:
+      app: erp-virtualization
+  rules:
+  # Permitir acceso solo desde clientes autenticados
+  - from:
+    - source:
+        principals: ["cluster.local/ns/erp-system/sa/erp-client-sa"]
+    to:
+    - operation:
+        methods: ["GET", "POST", "PUT", "DELETE"]
+        paths: ["/api/*"]
+    when:
+    - key: request.headers[authorization]
+      values: ["Bearer *"]
+
+  # Permitir health checks desde Kubernetes
+  - from:
+    - source:
+        principals: ["cluster.local/ns/kube-system/sa/default"]
+    to:
+    - operation:
+        methods: ["GET"]
+        paths: ["/health", "/ready"]
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: RequestAuthentication
+metadata:
+  name: erp-jwt-auth
+  namespace: erp-system
+spec:
+  selector:
+    matchLabels:
+      app: erp-virtualization
+  jwtRules:
+  - issuer: "https://erp-auth.company.com"
+    jwksUri: "https://erp-auth.company.com/.well-known/jwks.json"
+    audiences:
+    - "erp-virtualization-api"
+    forwardOriginalToken: true
+
+---
+# Destination Rule para configurar TLS
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: erp-virtualization-dr
+  namespace: erp-system
+spec:
+  host: erp-virtualization-service.erp-system.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL  # mTLS gestionado por Istio
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 50
+        maxRequestsPerConnection: 10
+    outlierDetection:
+      consecutiveErrors: 3
+      interval: 30s
+      baseEjectionTime: 30s
+
+---
+# Virtual Service para routing avanzado
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: erp-virtualization-vs
+  namespace: erp-system
+spec:
+  hosts:
+  - erp-virtualization-service.erp-system.svc.cluster.local
+  http:
+  # Rate limiting por usuario
+  - match:
+    - headers:
+        user-id:
+          regex: ".*"
+    fault:
+      delay:
+        percentage:
+          value: 0.1
+        fixedDelay: 5s
+    route:
+    - destination:
+        host: erp-virtualization-service.erp-system.svc.cluster.local
+        port:
+          number: 80
+    timeout: 30s
+    retries:
+      attempts: 3
+      perTryTimeout: 10s
+
+---
+# Gateway para acceso externo seguro
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: erp-virtualization-gateway
+  namespace: erp-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: erp-tls-secret
+    hosts:
+    - "erp.company.com"
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "erp.company.com"
+    # Redirect HTTP to HTTPS
+    tls:
+      httpsRedirect: true
+
+---
+# Service Monitor para Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: erp-virtualization-metrics
+  namespace: erp-system
+  labels:
+    app: erp-virtualization
+spec:
+  selector:
+    matchLabels:
+      app: erp-virtualization
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s

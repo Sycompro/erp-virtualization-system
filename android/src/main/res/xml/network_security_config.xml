@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Configuración de seguridad de red empresarial -->
+    
+    <!-- Configuración por defecto - Solo HTTPS -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Confiar solo en CAs del sistema -->
+            <certificates src="system"/>
+        </trust-anchors>
+    </base-config>
+    
+    <!-- Configuración específica para el dominio ERP -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">erp.company.com</domain>
+        <domain includeSubdomains="true">api.erp.company.com</domain>
+        <domain includeSubdomains="true">stream.erp.company.com</domain>
+        
+        <!-- Certificate Pinning para máxima seguridad -->
+        <pin-set expiration="2027-01-01">
+            <!-- Pin del certificado del servidor (SHA-256 del SPKI) -->
+            <pin digest="SHA-256">AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</pin>
+            <!-- Pin de backup -->
+            <pin digest="SHA-256">BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=</pin>
+        </pin-set>
+        
+        <trust-anchors>
+            <certificates src="system"/>
+            <!-- Certificado personalizado de la empresa si es necesario -->
+            <!-- <certificates src="@raw/company_ca_cert"/> -->
+        </trust-anchors>
+    </domain-config>
+    
+    <!-- Configuración para desarrollo (solo en debug) -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system"/>
+            <certificates src="user"/>
+        </trust-anchors>
+    </debug-overrides>
+    
+</network-security-config>

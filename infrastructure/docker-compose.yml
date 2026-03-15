@@ -1,0 +1,220 @@
+# Docker Compose para 5 Tablets - Configuración Simplificada
+
+version: '3.8'
+
+services:
+  # Servidor principal ERP
+  erp-server:
+    build: ../server
+    container_name: erp-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgresql://erp_user:secure_password@postgres:5432/erp_db
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=super-secure-jwt-key-change-in-production
+      - MAX_CONCURRENT_USERS=5
+      - CONTAINER_RUNTIME=docker
+    volumes:
+      - ./data/user-files:/data/users
+      - ./data/applications:/data/apps:ro
+      - ./logs:/var/log/erp
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - erp-network
+
+  # Base de datos PostgreSQL
+  postgres:
+    image: postgres:15-alpine
+    container_name: erp-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=erp_db
+      - POSTGRES_USER=erp_user
+      - POSTGRES_PASSWORD=secure_password
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - erp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp_user -d erp_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis para cache y sesiones
+  redis:
+    image: redis:7-alpine
+    container_name: erp-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass redis_password
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - erp-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Load Balancer y SSL Termination
+  nginx:
+    image: nginx:alpine
+    container_name: erp-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    depends_on:
+      - erp-server
+    networks:
+      - erp-network
+
+  # TURN Server para WebRTC (CoTURN)
+  coturn:
+    image: coturn/coturn:latest
+    container_name: erp-coturn
+    restart: unless-stopped
+    ports:
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "49152-49162:49152-49162/udp"  # Solo 10 puertos para 5 usuarios
+    environment:
+      - TURN_USERNAME=erp_turn_user
+      - TURN_PASSWORD=turn_secure_password
+    command: |
+      -n
+      -r erp.tuempresa.com
+      -p 3478
+      -u erp_turn_user:turn_secure_password
+      -v
+      -f
+      -a
+      --no-dtls
+      --no-tls
+    networks:
+      - erp-network
+
+  # Contenedor SAP (ejemplo)
+  sap-container:
+    image: erp-virtualization/sap-gui:latest
+    container_name: sap-gui
+    restart: "no"  # Solo se inicia cuando un usuario lo solicita
+    ports:
+      - "5900:5900"  # VNC
+      - "6080:6080"  # noVNC web
+    environment:
+      - DISPLAY=:1
+      - VNC_RESOLUTION=1920x1080
+      - VNC_PASSWORD=sap_vnc_pass
+    volumes:
+      - ./data/sap:/sap/data
+    networks:
+      - erp-network
+    profiles:
+      - sap  # Solo se inicia con docker-compose --profile sap up
+
+  # Contenedor Office (ejemplo)
+  office-container:
+    image: erp-virtualization/office:latest
+    container_name: office-suite
+    restart: "no"
+    ports:
+      - "3389:3389"  # RDP
+    environment:
+      - RDP_USER=office_user
+      - RDP_PASSWORD=office_secure_pass
+    volumes:
+      - ./data/office:/home/office_user/Documents
+    networks:
+      - erp-network
+    profiles:
+      - office
+
+  # Contenedor AutoCAD (ejemplo)
+  autocad-container:
+    image: erp-virtualization/autocad:latest
+    container_name: autocad-app
+    restart: "no"
+    ports:
+      - "3390:3389"  # RDP en puerto diferente
+    environment:
+      - RDP_USER=cad_user
+      - RDP_PASSWORD=cad_secure_pass
+      - GPU_ACCELERATION=true
+    volumes:
+      - ./data/autocad:/home/cad_user/Projects
+    networks:
+      - erp-network
+    profiles:
+      - autocad
+    # Acceso a GPU si está disponible
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # Monitoreo simple con Prometheus (opcional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: erp-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./data/prometheus:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    networks:
+      - erp-network
+    profiles:
+      - monitoring
+
+  # Grafana para dashboards (opcional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: erp-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=grafana_admin_pass
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+    networks:
+      - erp-network
+    profiles:
+      - monitoring
+
+networks:
+  erp-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres_data:
+  redis_data:
+  user_files:
+  prometheus_data:
+  grafana_data:

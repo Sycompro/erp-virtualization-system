@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Espaciado -->
+    <dimen name="spacing_xs">4dp</dimen>
+    <dimen name="spacing_sm">8dp</dimen>
+    <dimen name="spacing_md">16dp</dimen>
+    <dimen name="spacing_lg">24dp</dimen>
+    <dimen name="spacing_xl">32dp</dimen>
+    <dimen name="spacing_xxl">48dp</dimen>
+    
+    <!-- Padding -->
+    <dimen name="padding_xs">4dp</dimen>
+    <dimen name="padding_sm">8dp</dimen>
+    <dimen name="padding_md">16dp</dimen>
+    <dimen name="padding_lg">24dp</dimen>
+    <dimen name="padding_xl">32dp</dimen>
+    
+    <!-- Margin -->
+    <dimen name="margin_xs">4dp</dimen>
+    <dimen name="margin_sm">8dp</dimen>
+    <dimen name="margin_md">16dp</dimen>
+    <dimen name="margin_lg">24dp</dimen>
+    <dimen name="margin_xl">32dp</dimen>
+    
+    <!-- Elevación -->
+    <dimen name="elevation_sm">2dp</dimen>
+    <dimen name="elevation_md">4dp</dimen>
+    <dimen name="elevation_lg">8dp</dimen>
+    <dimen name="elevation_xl">16dp</dimen>
+    
+    <!-- Bordes redondeados -->
+    <dimen name="corner_radius_xs">4dp</dimen>
+    <dimen name="corner_radius_sm">8dp</dimen>
+    <dimen name="corner_radius_md">12dp</dimen>
+    <dimen name="corner_radius_lg">16dp</dimen>
+    <dimen name="corner_radius_xl">20dp</dimen>
+    <dimen name="corner_radius_xxl">24dp</dimen>
+    <dimen name="corner_radius_round">28dp</dimen>
+    
+    <!-- Tamaños de iconos -->
+    <dimen name="icon_size_xs">16dp</dimen>
+    <dimen name="icon_size_sm">20dp</dimen>
+    <dimen name="icon_size_md">24dp</dimen>
+    <dimen name="icon_size_lg">32dp</dimen>
+    <dimen name="icon_size_xl">48dp</dimen>
+    <dimen name="icon_size_xxl">64dp</dimen>
+    
+    <!-- Alturas de botones -->
+    <dimen name="button_height_sm">36dp</dimen>
+    <dimen name="button_height_md">48dp</dimen>
+    <dimen name="button_height_lg">56dp</dimen>
+    <dimen name="button_height_xl">64dp</dimen>
+    
+    <!-- Alturas de cards -->
+    <dimen name="card_height_sm">80dp</dimen>
+    <dimen name="card_height_md">120dp</dimen>
+    <dimen name="card_height_lg">200dp</dimen>
+    <dimen name="card_height_xl">300dp</dimen>
+    
+    <!-- Anchos mínimos -->
+    <dimen name="min_touch_target">48dp</dimen>
+    <dimen name="min_button_width">88dp</dimen>
+    
+    <!-- Streaming específico -->
+    <dimen name="streaming_container_height">400dp</dimen>
+    <dimen name="streaming_controls_height">60dp</dimen>
+    <dimen name="streaming_overlay_padding">16dp</dimen>
+    
+    <!-- Status bar y navigation -->
+    <dimen name="status_bar_height">24dp</dimen>
+    <dimen name="navigation_bar_height">56dp</dimen>
+    <dimen name="app_bar_height">64dp</dimen>
+    
+    <!-- Componentes específicos -->
+    <dimen name="progress_indicator_size">48dp</dimen>
+    <dimen name="avatar_size_sm">32dp</dimen>
+    <dimen name="avatar_size_md">48dp</dimen>
+    <dimen name="avatar_size_lg">64dp</dimen>
+    
+    <!-- Responsive breakpoints -->
+    <dimen name="tablet_min_width">600dp</dimen>
+    <dimen name="desktop_min_width">840dp</dimen>
+</resources>

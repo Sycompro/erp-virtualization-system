@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Colores Empresariales Principales -->
+    <color name="corporate_blue">#1E3A8A</color>
+    <color name="corporate_blue_dark">#1E40AF</color>
+    <color name="corporate_blue_light">#3B82F6</color>
+    
+    <!-- Verde Empresarial -->
+    <color name="enterprise_green">#059669</color>
+    <color name="enterprise_green_dark">#047857</color>
+    <color name="enterprise_green_light">#10B981</color>
+    
+    <!-- Gris Ejecutivo -->
+    <color name="executive_gray">#374151</color>
+    <color name="executive_gray_dark">#1F2937</color>
+    <color name="executive_gray_light">#6B7280</color>
+    
+    <!-- Colores Pasteles Suaves -->
+    <color name="soft_lavender">#E0E7FF</color>
+    <color name="soft_mint">#D1FAE5</color>
+    <color name="soft_peach">#FEF3C7</color>
+    <color name="soft_rose">#FCE7F3</color>
+    <color name="soft_sky">#E0F2FE</color>
+    
+    <!-- Colores de Estado -->
+    <color name="success_green">#22C55E</color>
+    <color name="warning_amber">#F59E0B</color>
+    <color name="error_red">#EF4444</color>
+    <color name="info_blue">#3B82F6</color>
+    
+    <!-- Colores de Superficie -->
+    <color name="surface_primary">#FAFAFA</color>
+    <color name="surface_secondary">#F5F5F5</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="surface_elevated">#FFFFFF</color>
+    
+    <!-- Colores de Texto -->
+    <color name="text_primary">#111827</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="text_tertiary">#9CA3AF</color>
+    <color name="text_on_primary">#FFFFFF</color>
+    
+    <!-- Colores de Acento -->
+    <color name="accent_gold">#D97706</color>
+    <color name="accent_purple">#7C3AED</color>
+    <color name="accent_teal">#0D9488</color>
+    
+    <!-- Colores del Sistema -->
+    <color name="black">#000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="transparent">#00000000</color>
+</resources>

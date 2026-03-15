@@ -1,0 +1,69 @@
+# Archivos compilados
+target/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Archivos de configuración local
+.env
+.env.local
+*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencias
+node_modules/
+.npm
+.yarn/
+
+# Android
+android/build/
+android/.gradle/
+android/app/build/
+android/local.properties
+android/.idea/
+*.apk
+*.aab
+
+# Rust
+Cargo.lock
+target/
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Datos temporales
+data/
+temp/
+tmp/
+
+# Certificados y claves
+*.pem
+*.key
+*.crt
+*.p12
+
+# Railway
+.railway/
+
+# Backup files
+*.bak
+*.backup

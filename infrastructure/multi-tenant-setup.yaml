@@ -1,0 +1,259 @@
+# Configuración Multi-Tenant para Múltiples Tablets/Usuarios
+
+# Namespace por empresa/organización
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: erp-company-a
+  labels:
+    tenant: company-a
+    istio-injection: enabled
+    security-level: high
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: erp-company-b
+  labels:
+    tenant: company-b
+    istio-injection: enabled
+    security-level: high
+
+---
+# ResourceQuota por tenant para limitar recursos
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: company-a-quota
+  namespace: erp-company-a
+spec:
+  hard:
+    requests.cpu: "50"      # 50 CPU cores
+    requests.memory: 200Gi  # 200GB RAM
+    requests.storage: 10Ti  # 10TB storage
+    pods: "500"             # Máximo 500 pods
+    services: "50"          # Máximo 50 servicios
+    persistentvolumeclaims: "100"
+
+---
+# Network Policy para aislamiento entre tenants
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: tenant-isolation
+  namespace: erp-company-a
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  ingress:
+  # Solo permitir tráfico del mismo tenant
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          tenant: company-a
+  
+  egress:
+  # Solo permitir salida al mismo tenant y servicios compartidos
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          tenant: company-a
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: shared-services
+
+---
+# ConfigMap específico por tenant
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: company-a-config
+  namespace: erp-company-a
+data:
+  # Configuración específica de la empresa A
+  company.yaml: |
+    company_info:
+      name: "Company A"
+      domain: "company-a.erp.com"
+      max_concurrent_users: 100
+      allowed_applications:
+        - sap
+        - office
+        - autocad
+      
+    branding:
+      primary_color: "#1E3A8A"
+      logo_url: "/assets/company-a-logo.png"
+      theme: "corporate-blue"
+    
+    security:
+      session_timeout: 3600  # 1 hora
+      max_failed_attempts: 3
+      require_2fa: true
+      allowed_ip_ranges:
+        - "192.168.1.0/24"
+        - "10.0.0.0/8"
+
+---
+# Deployment específico por tenant
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-server-company-a
+  namespace: erp-company-a
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: erp-virtualization
+      tenant: company-a
+  template:
+    metadata:
+      labels:
+        app: erp-virtualization
+        tenant: company-a
+    spec:
+      serviceAccountName: erp-virtualization-sa
+      containers:
+      - name: erp-server
+        image: erp-virtualization/server:latest
+        env:
+        - name: TENANT_ID
+          value: "company-a"
+        - name: TENANT_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              name: company-a-config
+              key: company.yaml
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: company-a-db-secret
+              key: url
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: company-a-data
+          mountPath: /data
+        - name: shared-apps
+          mountPath: /apps
+          readOnly: true
+      volumes:
+      - name: company-a-data
+        persistentVolumeClaim:
+          claimName: company-a-data-pvc
+      - name: shared-apps
+        persistentVolumeClaim:
+          claimName: shared-apps-pvc
+
+---
+# Service específico por tenant
+apiVersion: v1
+kind: Service
+metadata:
+  name: erp-service-company-a
+  namespace: erp-company-a
+spec:
+  selector:
+    app: erp-virtualization
+    tenant: company-a
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+  - port: 443
+    targetPort: 8443
+    name: https
+
+---
+# Istio VirtualService para routing por tenant
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: company-a-routing
+  namespace: erp-company-a
+spec:
+  hosts:
+  - company-a.erp.com
+  gateways:
+  - erp-gateway
+  http:
+  - match:
+    - headers:
+        x-tenant-id:
+          exact: company-a
+    route:
+    - destination:
+        host: erp-service-company-a.erp-company-a.svc.cluster.local
+        port:
+          number: 80
+    fault:
+      delay:
+        percentage:
+          value: 0.1
+        fixedDelay: 5s
+
+---
+# PersistentVolumeClaim para datos del tenant
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: company-a-data-pvc
+  namespace: erp-company-a
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: erp-bulk-storage
+  resources:
+    requests:
+      storage: 5Ti
+
+---
+# Secret para base de datos del tenant
+apiVersion: v1
+kind: Secret
+metadata:
+  name: company-a-db-secret
+  namespace: erp-company-a
+type: Opaque
+data:
+  url: cG9zdGdyZXNxbDovL3VzZXI6cGFzc0BkYi5jb21wYW55LWEuc3ZjOjU0MzIvZXJwX2RiCg== # Base64
+
+---
+# HPA específico por tenant
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: company-a-hpa
+  namespace: erp-company-a
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: erp-server-company-a
+  minReplicas: 2
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Pods
+    pods:
+      metric:
+        name: concurrent_users
+      target:
+        type: AverageValue
+        averageValue: "50"  # 50 usuarios por pod

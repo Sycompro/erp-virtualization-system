@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-virtualization-server
+  namespace: erp-system
+  labels:
+    app: erp-virtualization
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: erp-virtualization
+  template:
+    metadata:
+      labels:
+        app: erp-virtualization
+        version: v1
+      annotations:
+        # Istio sidecar injection
+        sidecar.istio.io/inject: "true"
+        # Security annotations
+        container.apparmor.security.beta.kubernetes.io/erp-server: runtime/default
+    spec:
+      serviceAccountName: erp-virtualization-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: erp-server
+        image: erp-virtualization/server:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: erp-db-secret
+              key: url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: erp-redis-secret
+              key: url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: erp-jwt-secret
+              key: secret
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "2000m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+        - name: tls-certs
+          mountPath: /etc/tls
+          readOnly: true
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      - name: tls-certs
+        secret:
+          secretName: erp-tls-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: erp-virtualization-service
+  namespace: erp-system
+  labels:
+    app: erp-virtualization
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 8443
+    protocol: TCP
+    name: https
+  selector:
+    app: erp-virtualization
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: erp-virtualization-sa
+  namespace: erp-system
+  labels:
+    app: erp-virtualization
+---
+# Network Policy para seguridad de red
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: erp-virtualization-netpol
+  namespace: erp-system
+spec:
+  podSelector:
+    matchLabels:
+      app: erp-virtualization
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: istio-system
+    - podSelector:
+        matchLabels:
+          app: erp-client
+    ports:
+    - protocol: TCP
+      port: 8080
+    - protocol: TCP
+      port: 8443
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: erp-database
+    ports:
+    - protocol: TCP
+      port: 5432
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: erp-redis
+    ports:
+    - protocol: TCP
+      port: 6379

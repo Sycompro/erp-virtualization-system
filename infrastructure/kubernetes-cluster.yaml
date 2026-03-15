@@ -1,0 +1,209 @@
+# Configuración del Cluster Kubernetes para ERP Virtualization
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: erp-system
+  labels:
+    istio-injection: enabled
+    security-level: high
+
+---
+# Configuración de Storage Classes
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: erp-fast-ssd
+provisioner: kubernetes.io/no-provisioner
+parameters:
+  type: ssd
+  replication-type: synchronous
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: erp-bulk-storage
+provisioner: kubernetes.io/no-provisioner
+parameters:
+  type: hdd
+  replication-type: asynchronous
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+
+---
+# Persistent Volumes para datos de usuario
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: erp-user-data-pv
+spec:
+  capacity:
+    storage: 5Ti
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: erp-bulk-storage
+  nfs:
+    server: 192.168.40.10
+    path: /opt/erp-data/users
+
+---
+# Persistent Volume para aplicaciones
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: erp-apps-pv
+spec:
+  capacity:
+    storage: 1Ti
+  accessModes:
+    - ReadOnlyMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: erp-fast-ssd
+  nfs:
+    server: 192.168.40.10
+    path: /opt/erp-data/applications
+
+---
+# ConfigMap para configuración global
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: erp-config
+  namespace: erp-system
+data:
+  # Configuración de red
+  network.yaml: |
+    webrtc:
+      stun_servers:
+        - "stun:stun.l.google.com:19302"
+        - "stun:stun1.l.google.com:19302"
+      turn_servers:
+        - url: "turn:turn.company.com:3478"
+          username: "erp-system"
+          credential: "secure-password"
+    
+    # Configuración de streaming
+    streaming:
+      max_resolution: "1920x1080"
+      max_fps: 60
+      codec_preference: ["AV1", "H264", "VP9"]
+      adaptive_bitrate: true
+      min_bitrate: "1Mbps"
+      max_bitrate: "50Mbps"
+  
+  # Configuración de aplicaciones
+  applications.yaml: |
+    default_resources:
+      cpu_limit: "2000m"
+      memory_limit: "4Gi"
+      storage_limit: "20Gi"
+    
+    application_profiles:
+      sap:
+        cpu_limit: "4000m"
+        memory_limit: "8Gi"
+        gpu_required: false
+      autocad:
+        cpu_limit: "6000m"
+        memory_limit: "16Gi"
+        gpu_required: true
+        gpu_memory: "4Gi"
+      office:
+        cpu_limit: "2000m"
+        memory_limit: "4Gi"
+        gpu_required: false
+
+---
+# Secret para certificados TLS
+apiVersion: v1
+kind: Secret
+metadata:
+  name: erp-tls-secret
+  namespace: erp-system
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTi... # Base64 encoded certificate
+  tls.key: LS0tLS1CRUdJTi... # Base64 encoded private key
+
+---
+# Secret para autenticación JWT
+apiVersion: v1
+kind: Secret
+metadata:
+  name: erp-jwt-secret
+  namespace: erp-system
+type: Opaque
+data:
+  secret: c3VwZXItc2VjdXJlLWp3dC1rZXktY2hhbmdlLWluLXByb2R1Y3Rpb24= # Base64
+
+---
+# Service Account para el sistema ERP
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: erp-virtualization-sa
+  namespace: erp-system
+
+---
+# ClusterRole para permisos necesarios
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: erp-virtualization-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["networkpolicies"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: erp-virtualization-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: erp-virtualization-role
+subjects:
+- kind: ServiceAccount
+  name: erp-virtualization-sa
+  namespace: erp-system
+
+---
+# HorizontalPodAutoscaler para auto-scaling
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: erp-server-hpa
+  namespace: erp-system
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: erp-virtualization-server
+  minReplicas: 3
+  maxReplicas: 50
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
