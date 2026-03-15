@@ -2,6 +2,8 @@
 
 Sistema profesional de virtualización ERP para 5 tablets con arquitectura híbrida Railway + Servidor Local.
 
+**🚀 Última actualización:** $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+
 ## 🎯 Arquitectura Híbrida
 
 ### Railway (Nube) - API + Autenticación

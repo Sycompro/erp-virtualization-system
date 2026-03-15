@@ -1,5 +1,5 @@
 # Dockerfile para Railway - ERP API Service
-FROM rust:1.75-slim as builder
+FROM rust:1.82-slim as builder
 
 # Instalar dependencias de compilación
 RUN apt-get update && apt-get install -y \
