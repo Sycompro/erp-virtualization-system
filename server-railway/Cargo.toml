@@ -3,6 +3,14 @@ name = "erp-railway-api"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "erp-railway-api"
+path = "src/main.rs"
+
+[[bin]]
+name = "erp-railway-api-simple"
+path = "src/main_simple.rs"
+
 [dependencies]
 axum = "0.7"
 tokio = { version = "1.0", features = ["full"] }
