@@ -7,6 +7,7 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, Mutex};
 use tracing::{info, error, warn};
 use uuid::Uuid;
+use crate::screen_capture::{ScreenCaptureService, CaptureConfig};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StreamingSession {
@@ -61,6 +62,7 @@ pub struct StreamingService {
     active_sessions: Arc<RwLock<HashMap<String, StreamingSession>>>,
     websocket_connections: Arc<RwLock<HashMap<String, tokio::sync::mpsc::UnboundedSender<Message>>>>,
     webrtc_peers: Arc<Mutex<HashMap<String, WebRTCPeer>>>,
+    screen_capture: Arc<ScreenCaptureService>,
 }
 
 struct WebRTCPeer {
@@ -70,13 +72,14 @@ struct WebRTCPeer {
 }
 
 impl StreamingService {
-    pub async fn new() -> Result<Self> {
-        info!("🎥 Inicializando Streaming Service");
+    pub async fn new(screen_capture: Arc<ScreenCaptureService>) -> Result<Self> {
+        info!("🎥 Inicializando Streaming Service con Screen Capture");
 
         Ok(Self {
             active_sessions: Arc::new(RwLock::new(HashMap::new())),
             websocket_connections: Arc::new(RwLock::new(HashMap::new())),
             webrtc_peers: Arc::new(Mutex::new(HashMap::new())),
+            screen_capture,
         })
     }
 

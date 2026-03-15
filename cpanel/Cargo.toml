@@ -22,3 +22,5 @@ bollard = "0.15"  # Docker API
 webrtc = "0.7"
 webrtc-util = "0.7"
 bytes = "1.0"
+image = "0.24"    # Para procesamiento de imágenes
+base64 = "0.21"   # Para encoding de frames

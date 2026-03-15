@@ -86,4 +86,21 @@ impl AuthClient {
             Err(_) => Ok(false),
         }
     }
+
+    pub async fn test_connection(&self) -> Result<()> {
+        let url = format!("{}/health", self.railway_api_url);
+        
+        let response = self.client
+            .get(&url)
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .await?;
+        
+        if response.status().is_success() {
+            tracing::info!("✅ Conexión a Railway API exitosa");
+            Ok(())
+        } else {
+            anyhow::bail!("Railway API respondió con status: {}", response.status())
+        }
+    }
 }
