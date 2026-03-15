@@ -4,7 +4,7 @@ use uuid::Uuid;
 use chrono::{DateTime, Utc};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct User {
+pub struct UserInfo {
     pub id: Uuid,
     pub username: String,
     pub email: String,
@@ -14,68 +14,74 @@ pub struct User {
     pub is_active: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ValidateTokenRequest {
     token: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ValidateTokenResponse {
     valid: bool,
-    user: Option<User>,
+    user: Option<UserInfo>,
 }
 
 pub struct AuthClient {
-    railway_api_url: String,
     client: reqwest::Client,
+    railway_api_url: String,
 }
 
 impl AuthClient {
     pub async fn new() -> Result<Self> {
         let railway_api_url = std::env::var("RAILWAY_API_URL")
-            .unwrap_or_else(|_| "https://your-railway-app.railway.app".to_string());
-
+            .unwrap_or_else(|_| "https://erp-virtualization-system-production.up.railway.app".to_string());
+        
         let client = reqwest::Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(30))
             .build()?;
-
+        
+        tracing::info!("🔗 AuthClient configurado para: {}", railway_api_url);
+        
         Ok(Self {
-            railway_api_url,
             client,
+            railway_api_url,
         })
     }
-
-    pub async fn validate_token(&self, token: &str) -> Result<User> {
+    
+    pub async fn validate_token(&self, token: &str) -> Result<UserInfo> {
+        let url = format!("{}/auth/validate", self.railway_api_url);
+        
         let request = ValidateTokenRequest {
             token: token.to_string(),
         };
-
+        
         let response = self.client
-            .post(&format!("{}/auth/validate", self.railway_api_url))
+            .post(&url)
             .json(&request)
             .send()
             .await?;
-
-        if !response.status().is_success() {
-            return Err(anyhow::anyhow!("Token validation failed"));
-        }
-
-        let validation_response: ValidateTokenResponse = response.json().await?;
-
-        if validation_response.valid {
-            validation_response.user
-                .ok_or_else(|| anyhow::anyhow!("Valid token but no user data"))
+        
+        if response.status().is_success() {
+            let validate_response: ValidateTokenResponse = response.json().await?;
+            
+            if validate_response.valid {
+                if let Some(user) = validate_response.user {
+                    tracing::debug!("✅ Token válido para usuario: {}", user.username);
+                    Ok(user)
+                } else {
+                    anyhow::bail!("Token válido pero sin información de usuario")
+                }
+            } else {
+                anyhow::bail!("Token inválido")
+            }
         } else {
-            Err(anyhow::anyhow!("Invalid token"))
+            anyhow::bail!("Error validando token: {}", response.status())
         }
     }
-
-    pub async fn check_railway_connection(&self) -> Result<bool> {
-        match self.client
-            .get(&format!("{}/health", self.railway_api_url))
-            .send()
-            .await
-        {
+    
+    pub async fn health_check(&self) -> Result<bool> {
+        let url = format!("{}/health", self.railway_api_url);
+        
+        match self.client.get(&url).send().await {
             Ok(response) => Ok(response.status().is_success()),
             Err(_) => Ok(false),
         }

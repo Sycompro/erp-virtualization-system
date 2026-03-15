@@ -58,8 +58,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(state);
 
     // Iniciar servidor local
-    let listener = TcpListener::bind("0.0.0.0:8080").await?;
-    info!("🌐 Servidor Local ejecutándose en http://0.0.0.0:8080");
+    let port = std::env::var("LOCAL_SERVER_PORT").unwrap_or_else(|_| "8081".to_string());
+    let addr = format!("0.0.0.0:{}", port);
+    let listener = TcpListener::bind(&addr).await?;
+    info!("🌐 Servidor Local ejecutándose en http://{}", addr);
     
     axum::serve(listener, app).await?;
     
