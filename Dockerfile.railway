@@ -20,7 +20,7 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs
 # Construir dependencias (se cachea si Cargo.toml no cambia)
 RUN cargo build --release && rm -rf src
 
-# Copiar código fuente real
+# Copiar código fuente real y archivos necesarios
 COPY server-railway/src ./src
 COPY database ./database
 

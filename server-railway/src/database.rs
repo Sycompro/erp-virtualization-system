@@ -3,6 +3,8 @@ use anyhow::Result;
 use uuid::Uuid;
 use crate::models::{User, UserSession, Application, SystemStats};
 
+mod migrations;
+
 pub struct DatabaseService {
     pool: PgPool,
 }
@@ -14,8 +16,12 @@ impl DatabaseService {
         
         let pool = PgPool::connect(&database_url).await?;
         
-        // Ejecutar migraciones si es necesario
-        sqlx::migrate!("./database/migrations").run(&pool).await?;
+        // Ejecutar migraciones si es necesario (deshabilitado para Railway)
+        // Las migraciones se ejecutarán manualmente o via Railway CLI
+        // sqlx::migrate!("./database/migrations").run(&pool).await?;
+        
+        // Ejecutar inicialización de base de datos si es necesario
+        migrations::run_migrations_if_needed(&pool).await?;
         
         Ok(Self { pool })
     }
