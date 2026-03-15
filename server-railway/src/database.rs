@@ -304,7 +304,7 @@ impl DatabaseService {
             sqlx::query("
                 CREATE TABLE IF NOT EXISTS applications (
                     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-                    name VARCHAR(100) NOT NULL,
+                    name VARCHAR(100) UNIQUE NOT NULL,
                     app_type VARCHAR(50) NOT NULL,
                     category VARCHAR(50) NOT NULL,
                     description TEXT,
@@ -402,14 +402,19 @@ impl DatabaseService {
             // Insert sample applications
             tracing::info!("🚀 Creando aplicaciones de ejemplo...");
             let _ = sqlx::query("
-                INSERT INTO applications (name, app_type, category, description, image_name, display_protocol, default_port, system_requirements, supported_features) VALUES
-                ('SAP GUI', 'sap', 'ERP Systems', 'Sistema ERP empresarial SAP con interfaz completa', 'erp-virtualization/sap-gui:latest', 'VNC', 5900, 
+                INSERT INTO applications (name, app_type, category, description, image_name, display_protocol, default_port, system_requirements, supported_features) 
+                SELECT 'SAP GUI', 'sap', 'ERP Systems', 'Sistema ERP empresarial SAP con interfaz completa', 'erp-virtualization/sap-gui:latest', 'VNC', 5900, 
                  '{\"min_ram_gb\": 4, \"recommended_ram_gb\": 8, \"gpu_required\": false}',
-                 '[\"Streaming HD\", \"Touch optimizado\", \"Clipboard sync\"]'),
-                ('Microsoft Office', 'office', 'Office Suite', 'Word, Excel, PowerPoint, Outlook completos', 'erp-virtualization/office:latest', 'RDP', 3389,
+                 '[\"Streaming HD\", \"Touch optimizado\", \"Clipboard sync\"]'
+                WHERE NOT EXISTS (SELECT 1 FROM applications WHERE name = 'SAP GUI')
+            ").execute(pool).await;
+            
+            let _ = sqlx::query("
+                INSERT INTO applications (name, app_type, category, description, image_name, display_protocol, default_port, system_requirements, supported_features) 
+                SELECT 'Microsoft Office', 'office', 'Office Suite', 'Word, Excel, PowerPoint, Outlook completos', 'erp-virtualization/office:latest', 'RDP', 3389,
                  '{\"min_ram_gb\": 2, \"recommended_ram_gb\": 4, \"gpu_required\": false}',
-                 '[\"Streaming HD\", \"Touch optimizado\", \"Clipboard sync\"]')
-                ON CONFLICT (name) DO NOTHING
+                 '[\"Streaming HD\", \"Touch optimizado\", \"Clipboard sync\"]'
+                WHERE NOT EXISTS (SELECT 1 FROM applications WHERE name = 'Microsoft Office')
             ").execute(pool).await;
             
             tracing::info!("✅ Inicialización de base de datos completada exitosamente");
