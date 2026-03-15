@@ -7,63 +7,105 @@ use axum::{
 };
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tower_http::cors::CorsLayer;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 use tracing::info;
 use serde::Deserialize;
 
 mod auth;
 mod database;
 mod models;
+mod visualization;
 
 use auth::AuthService;
 use database::DatabaseService;
+use visualization::VisualizationService;
 
 #[derive(Clone)]
 pub struct AppState {
     auth_service: Arc<AuthService>,
     db_service: Arc<DatabaseService>,
+    viz_service: Arc<VisualizationService>,
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt::init();
     
-    info!("🚂 Iniciando ERP Railway API Service");
+    info!("🚂 Iniciando ERP Railway API Service con Panel de Administración");
 
-    // Inicializar servicios
-    let db_service = Arc::new(DatabaseService::new().await?);
+    // Inicializar servicios (con manejo de errores mejorado)
+    let db_service = match DatabaseService::new().await {
+        Ok(service) => Arc::new(service),
+        Err(e) => {
+            eprintln!("❌ Error conectando a la base de datos: {}", e);
+            eprintln!("💡 Solución: Configura DATABASE_URL o usa modo sin base de datos");
+            
+            // Crear un servicio mock para desarrollo
+            Arc::new(DatabaseService::mock())
+        }
+    };
+    
     let auth_service = Arc::new(AuthService::new(db_service.clone()).await?);
+    let viz_service = Arc::new(VisualizationService::new(db_service.clone()));
 
     let state = AppState {
         auth_service,
-        db_service,
+        db_service: db_service.clone(),
+        viz_service: viz_service.clone(),
     };
 
     // Configurar rutas
     let app = Router::new()
-        .route("/", get(health_check))
+        // Panel de Administración (servir archivos estáticos)
+        .nest_service("/admin", ServeDir::new("static"))
+        .route("/", get(redirect_to_admin))
+        
+        // API de salud
         .route("/health", get(health_check))
+        
+        // API de autenticación
         .route("/auth/login", post(login))
         .route("/auth/logout", post(logout))
         .route("/auth/validate", post(validate_token))
         .route("/users/profile", get(get_user_profile))
+        
+        // API de aplicaciones
         .route("/applications/list", get(list_applications))
         .route("/applications/categories", get(list_categories))
         .route("/sessions/active", get(list_active_sessions))
+        
+        // API de configuración de visualización (como Parallels)
+        .route("/api/settings/config", get(visualization::get_visualization_config))
+        .route("/api/settings/video", post(visualization::save_video_settings))
+        .route("/api/settings/all", post(visualization::save_all_settings))
+        .route("/api/containers/:id/apply-config", post(visualization::apply_config_to_container))
+        
+        // API de estadísticas y contenedores
+        .route("/api/stats", get(visualization::get_stats))
+        .route("/api/containers", get(visualization::get_containers))
+        .route("/api/containers/:id/stop", post(visualization::stop_container))
+        
+        // API de sistema
         .route("/system/stats", get(system_stats))
+        
         .layer(CorsLayer::permissive())
         .with_state(state);
 
-    // Puerto desde Railway o 8080 por defecto
-    let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    // Puerto desde variable de entorno o 3000 por defecto (evitar conflicto con IIS)
+    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = format!("0.0.0.0:{}", port);
     
     let listener = TcpListener::bind(&addr).await?;
     info!("🌐 Railway API ejecutándose en {}", addr);
+    info!("🎛️  Panel de Administración disponible en: http://localhost:{}/admin/", port);
     
     axum::serve(listener, app).await?;
     
     Ok(())
+}
+
+async fn redirect_to_admin() -> impl IntoResponse {
+    axum::response::Redirect::permanent("/admin/")
 }
 
 async fn health_check() -> impl IntoResponse {
@@ -71,6 +113,14 @@ async fn health_check() -> impl IntoResponse {
         "status": "healthy",
         "service": "erp-railway-api",
         "version": "0.1.0",
+        "features": ["admin_panel", "visualization_config", "container_management"],
+        "admin_panel": "/admin/",
+        "endpoints": {
+            "panel": "/admin/",
+            "health": "/health",
+            "api_config": "/api/settings/config",
+            "api_stats": "/api/stats"
+        },
         "timestamp": chrono::Utc::now()
     }))
 }
@@ -188,3 +238,5 @@ async fn system_stats(
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
+
+// Implementación de DatabaseService::mock() movida a database.rs

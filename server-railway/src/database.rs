@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::models::{User, UserSession, Application, SystemStats};
 
 pub struct DatabaseService {
-    pool: PgPool,
+    pool: Option<PgPool>,
 }
 
 impl DatabaseService {
@@ -27,30 +27,52 @@ impl DatabaseService {
         
         tracing::info!("🎯 DatabaseService inicializado correctamente");
         
-        Ok(Self { pool })
+        Ok(Self { pool: Some(pool) })
+    }
+    
+    pub fn mock() -> Self {
+        tracing::info!("🎭 Iniciando DatabaseService en modo mock (sin PostgreSQL)");
+        Self { pool: None }
     }
 
     pub async fn get_user_by_username(&self, username: &str) -> Result<Option<User>> {
-        let row: Option<(Uuid, String, String, Option<String>, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, bool)> = sqlx::query_as(
-            "SELECT id, username, email, full_name, created_at, last_login, is_active 
-             FROM users WHERE username = $1 AND is_active = true"
-        )
-        .bind(username)
-        .fetch_optional(&self.pool)
-        .await?;
+        if let Some(pool) = &self.pool {
+            let row: Option<(Uuid, String, String, Option<String>, chrono::DateTime<chrono::Utc>, Option<chrono::DateTime<chrono::Utc>>, bool)> = sqlx::query_as(
+                "SELECT id, username, email, full_name, created_at, last_login, is_active 
+                 FROM users WHERE username = $1 AND is_active = true"
+            )
+            .bind(username)
+            .fetch_optional(pool)
+            .await?;
 
-        if let Some(row) = row {
-            Ok(Some(User {
-                id: row.0,
-                username: row.1,
-                email: row.2,
-                full_name: row.3,
-                created_at: row.4,
-                last_login: row.5,
-                is_active: row.6,
-            }))
+            if let Some(row) = row {
+                Ok(Some(User {
+                    id: row.0,
+                    username: row.1,
+                    email: row.2,
+                    full_name: row.3,
+                    created_at: row.4,
+                    last_login: row.5,
+                    is_active: row.6,
+                }))
+            } else {
+                Ok(None)
+            }
         } else {
-            Ok(None)
+            // Modo mock - devolver usuario de prueba
+            if username == "admin" || username.starts_with("tablet") {
+                Ok(Some(User {
+                    id: Uuid::new_v4(),
+                    username: username.to_string(),
+                    email: format!("{}@erpvirtualization.com", username),
+                    full_name: Some(format!("Usuario {}", username)),
+                    created_at: chrono::Utc::now(),
+                    last_login: Some(chrono::Utc::now()),
+                    is_active: true,
+                }))
+            } else {
+                Ok(None)
+            }
         }
     }
 
@@ -164,77 +186,193 @@ impl DatabaseService {
     }
 
     pub async fn get_applications(&self) -> Result<Vec<Application>> {
-        let rows: Vec<(Uuid, String, String, String, Option<String>, String, String, Option<i32>, Option<String>, Option<serde_json::Value>, Option<serde_json::Value>, bool)> = sqlx::query_as(
-            "SELECT id, name, app_type, category, description, image_name, display_protocol, 
-                    default_port, icon_url, system_requirements, supported_features, is_active
-             FROM applications WHERE is_active = true ORDER BY category, name"
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        if let Some(pool) = &self.pool {
+            let rows: Vec<(Uuid, String, String, String, Option<String>, String, String, Option<i32>, Option<String>, Option<serde_json::Value>, Option<serde_json::Value>, bool)> = sqlx::query_as(
+                "SELECT id, name, app_type, category, description, image_name, display_protocol, 
+                        default_port, icon_url, system_requirements, supported_features, is_active
+                 FROM applications WHERE is_active = true ORDER BY category, name"
+            )
+            .fetch_all(pool)
+            .await?;
 
-        let applications = rows.into_iter().map(|row| Application {
-            id: row.0,
-            name: row.1,
-            app_type: row.2,
-            category: row.3,
-            description: row.4,
-            image_name: row.5,
-            display_protocol: row.6,
-            default_port: row.7,
-            icon_url: row.8,
-            system_requirements: row.9,
-            supported_features: row.10,
-            is_active: row.11,
-        }).collect();
+            let applications = rows.into_iter().map(|row| Application {
+                id: row.0,
+                name: row.1,
+                app_type: row.2,
+                category: row.3,
+                description: row.4,
+                image_name: row.5,
+                display_protocol: row.6,
+                default_port: row.7,
+                icon_url: row.8,
+                system_requirements: row.9,
+                supported_features: row.10,
+                is_active: row.11,
+            }).collect();
 
-        Ok(applications)
+            Ok(applications)
+        } else {
+            // Modo mock - devolver aplicaciones de ejemplo
+            self.get_applications_mock().await
+        }
+    }
+    
+    pub async fn get_applications_mock(&self) -> Result<Vec<Application>> {
+        Ok(vec![
+            Application {
+                id: Uuid::new_v4(),
+                name: "SAP GUI".to_string(),
+                app_type: "sap".to_string(),
+                category: "ERP Systems".to_string(),
+                description: Some("Sistema ERP empresarial SAP con interfaz completa".to_string()),
+                image_name: "erp-virtualization/sap-gui:latest".to_string(),
+                display_protocol: "VNC".to_string(),
+                default_port: Some(5900),
+                icon_url: Some("/icons/sap.png".to_string()),
+                system_requirements: None,
+                supported_features: None,
+                is_active: true,
+            },
+            Application {
+                id: Uuid::new_v4(),
+                name: "Microsoft Office".to_string(),
+                app_type: "office".to_string(),
+                category: "Office Suite".to_string(),
+                description: Some("Word, Excel, PowerPoint, Outlook completos".to_string()),
+                image_name: "erp-virtualization/office:latest".to_string(),
+                display_protocol: "RDP".to_string(),
+                default_port: Some(3389),
+                icon_url: Some("/icons/office.png".to_string()),
+                system_requirements: None,
+                supported_features: None,
+                is_active: true,
+            },
+            Application {
+                id: Uuid::new_v4(),
+                name: "AutoCAD".to_string(),
+                app_type: "autocad".to_string(),
+                category: "Design".to_string(),
+                description: Some("Software de diseño asistido por computadora".to_string()),
+                image_name: "erp-virtualization/autocad:latest".to_string(),
+                display_protocol: "RDP".to_string(),
+                default_port: Some(3390),
+                icon_url: Some("/icons/autocad.png".to_string()),
+                system_requirements: None,
+                supported_features: None,
+                is_active: true,
+            },
+            Application {
+                id: Uuid::new_v4(),
+                name: "LibreOffice".to_string(),
+                app_type: "libreoffice".to_string(),
+                category: "Office Suite".to_string(),
+                description: Some("Suite de oficina libre y gratuita".to_string()),
+                image_name: "erp-virtualization/libreoffice:latest".to_string(),
+                display_protocol: "VNC".to_string(),
+                default_port: Some(5901),
+                icon_url: Some("/icons/libreoffice.png".to_string()),
+                system_requirements: None,
+                supported_features: None,
+                is_active: true,
+            },
+        ])
     }
 
     pub async fn get_active_sessions(&self) -> Result<Vec<UserSession>> {
-        let rows: Vec<(Uuid, Uuid, String, Option<String>, Option<serde_json::Value>, Option<String>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>, bool)> = sqlx::query_as(
-            "SELECT s.id, s.user_id, s.session_token, s.device_id, s.device_info, s.ip_address::text,
-                    s.created_at, s.last_activity, s.expires_at, s.is_active
-             FROM user_sessions s
-             WHERE s.is_active = true AND s.expires_at > NOW()
-             ORDER BY s.last_activity DESC"
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        if let Some(pool) = &self.pool {
+            let rows: Vec<(Uuid, Uuid, String, Option<String>, Option<serde_json::Value>, Option<String>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>, chrono::DateTime<chrono::Utc>, bool)> = sqlx::query_as(
+                "SELECT s.id, s.user_id, s.session_token, s.device_id, s.device_info, s.ip_address::text,
+                        s.created_at, s.last_activity, s.expires_at, s.is_active
+                 FROM user_sessions s
+                 WHERE s.is_active = true AND s.expires_at > NOW()
+                 ORDER BY s.last_activity DESC"
+            )
+            .fetch_all(pool)
+            .await?;
 
-        let sessions = rows.into_iter().map(|row| UserSession {
-            id: row.0,
-            user_id: row.1,
-            session_token: row.2,
-            device_id: row.3,
-            device_info: row.4,
-            ip_address: row.5,
-            created_at: row.6,
-            last_activity: row.7,
-            expires_at: row.8,
-            is_active: row.9,
-        }).collect();
+            let sessions = rows.into_iter().map(|row| UserSession {
+                id: row.0,
+                user_id: row.1,
+                session_token: row.2,
+                device_id: row.3,
+                device_info: row.4,
+                ip_address: row.5,
+                created_at: row.6,
+                last_activity: row.7,
+                expires_at: row.8,
+                is_active: row.9,
+            }).collect();
 
-        Ok(sessions)
+            Ok(sessions)
+        } else {
+            // Modo mock - devolver sesiones de ejemplo
+            self.get_active_sessions_mock().await
+        }
+    }
+    
+    pub async fn get_active_sessions_mock(&self) -> Result<Vec<UserSession>> {
+        let now = chrono::Utc::now();
+        Ok(vec![
+            UserSession {
+                id: Uuid::new_v4(),
+                user_id: Uuid::new_v4(),
+                session_token: "mock_session_1".to_string(),
+                device_id: Some("tablet1".to_string()),
+                device_info: None,
+                ip_address: Some("192.168.1.101".to_string()),
+                created_at: now - chrono::Duration::hours(2),
+                last_activity: now - chrono::Duration::minutes(5),
+                expires_at: now + chrono::Duration::hours(6),
+                is_active: true,
+            },
+            UserSession {
+                id: Uuid::new_v4(),
+                user_id: Uuid::new_v4(),
+                session_token: "mock_session_2".to_string(),
+                device_id: Some("tablet2".to_string()),
+                device_info: None,
+                ip_address: Some("192.168.1.102".to_string()),
+                created_at: now - chrono::Duration::hours(1),
+                last_activity: now - chrono::Duration::minutes(2),
+                expires_at: now + chrono::Duration::hours(7),
+                is_active: true,
+            },
+        ])
     }
 
     pub async fn get_system_stats(&self) -> Result<SystemStats> {
-        let row: (i64, i64, i64, i64, i64) = sqlx::query_as(
-            "SELECT 
-                (SELECT COUNT(*) FROM users WHERE is_active = true) as active_users,
-                (SELECT COUNT(*) FROM user_sessions WHERE is_active = true AND expires_at > NOW()) as active_sessions,
-                (SELECT COUNT(*) FROM active_containers WHERE status = 'running') as running_containers,
-                (SELECT COUNT(*) FROM applications WHERE is_active = true) as available_applications,
-                (SELECT COUNT(*) FROM activity_logs WHERE created_at > NOW() - INTERVAL '24 hours') as activities_last_24h"
-        )
-        .fetch_one(&self.pool)
-        .await?;
+        if let Some(pool) = &self.pool {
+            let row: (i64, i64, i64, i64, i64) = sqlx::query_as(
+                "SELECT 
+                    (SELECT COUNT(*) FROM users WHERE is_active = true) as active_users,
+                    (SELECT COUNT(*) FROM user_sessions WHERE is_active = true AND expires_at > NOW()) as active_sessions,
+                    (SELECT COUNT(*) FROM active_containers WHERE status = 'running') as running_containers,
+                    (SELECT COUNT(*) FROM applications WHERE is_active = true) as available_applications,
+                    (SELECT COUNT(*) FROM activity_logs WHERE created_at > NOW() - INTERVAL '24 hours') as activities_last_24h"
+            )
+            .fetch_one(pool)
+            .await?;
 
+            Ok(SystemStats {
+                active_users: row.0,
+                active_sessions: row.1,
+                running_containers: row.2,
+                available_applications: row.3,
+                activities_last_24h: row.4,
+            })
+        } else {
+            // Modo mock - devolver estadísticas de ejemplo
+            self.get_system_stats_mock().await
+        }
+    }
+    
+    pub async fn get_system_stats_mock(&self) -> Result<SystemStats> {
         Ok(SystemStats {
-            active_users: row.0,
-            active_sessions: row.1,
-            running_containers: row.2,
-            available_applications: row.3,
-            activities_last_24h: row.4,
+            active_users: 5,
+            active_sessions: 3,
+            running_containers: 2,
+            available_applications: 4,
+            activities_last_24h: 25,
         })
     }
 

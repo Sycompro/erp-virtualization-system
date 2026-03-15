@@ -21,6 +21,3 @@ dependencyResolutionManagement {
 
 rootProject.name = "ERP Virtualization Android"
 include(":app")
-
-// Configurar el directorio del módulo app
-project(":app").projectDir = file(".")
