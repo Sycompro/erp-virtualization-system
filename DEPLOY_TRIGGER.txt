@@ -1,0 +1,13 @@
+FORCE RAILWAY DEPLOYMENT
+
+Timestamp: 2024-12-28 16:30:00
+Action: Force Railway to detect new project structure
+Commit: Fix Railway deployment with new structure
+
+Changes included:
+- ✅ Moved railway.json to project root
+- ✅ Updated Dockerfile path to railway-api/
+- ✅ Fixed build context for new structure
+- ✅ All Railway API code in railway-api/ folder
+
+This file forces Railway webhook activation with new structure.

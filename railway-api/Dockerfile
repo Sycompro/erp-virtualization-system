@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copiar todo el proyecto
-COPY . .
+# Copiar archivos del proyecto railway-api
+COPY railway-api/ .
 
 # Construir aplicación
 RUN cargo build --release --bin erp-railway-api
