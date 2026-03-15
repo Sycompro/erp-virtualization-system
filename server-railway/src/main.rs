@@ -35,17 +35,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Inicializar servicios (con manejo de errores mejorado)
     let db_service = match DatabaseService::new().await {
-        Ok(service) => Arc::new(service),
+        Ok(service) => {
+            info!("✅ Base de datos PostgreSQL conectada");
+            Arc::new(service)
+        },
         Err(e) => {
             eprintln!("❌ Error conectando a la base de datos: {}", e);
-            eprintln!("💡 Solución: Configura DATABASE_URL o usa modo sin base de datos");
+            eprintln!("💡 Iniciando en modo mock (desarrollo sin base de datos)");
             
             // Crear un servicio mock para desarrollo
             Arc::new(DatabaseService::mock())
         }
     };
     
-    let auth_service = Arc::new(AuthService::new(db_service.clone()).await?);
+    // Inicializar auth service (puede fallar en modo mock, usar mock también)
+    let auth_service = match AuthService::new(db_service.clone()).await {
+        Ok(service) => Arc::new(service),
+        Err(e) => {
+            eprintln!("⚠️ Error inicializando AuthService: {}", e);
+            eprintln!("💡 Usando AuthService mock");
+            Arc::new(AuthService::mock())
+        }
+    };
+    
     let viz_service = Arc::new(VisualizationService::new(db_service.clone()));
 
     let state = AppState {
@@ -238,5 +250,3 @@ async fn system_stats(
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
 }
-
-// Implementación de DatabaseService::mock() movida a database.rs

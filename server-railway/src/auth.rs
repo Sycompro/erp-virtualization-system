@@ -36,6 +36,14 @@ impl AuthService {
             local_server_url,
         })
     }
+    
+    pub fn mock() -> Self {
+        Self {
+            db: Arc::new(DatabaseService::mock()),
+            jwt_secret: "mock-jwt-secret".to_string(),
+            local_server_url: "ws://localhost:8080".to_string(),
+        }
+    }
 
     pub async fn authenticate(&self, username: String, password: String, device_id: Option<String>) -> Result<AuthResponse> {
         // Buscar usuario
