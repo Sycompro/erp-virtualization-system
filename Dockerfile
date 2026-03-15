@@ -11,19 +11,10 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# Copiar manifiestos de Cargo desde server-railway
-COPY server-railway/Cargo.toml server-railway/Cargo.lock ./
+# Copiar todo el directorio server-railway
+COPY server-railway/ ./
 
-# Crear src dummy para cachear dependencias
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-
-# Construir dependencias
-RUN cargo build --release && rm -rf src
-
-# Copiar código fuente real desde server-railway
-COPY server-railway/src ./src
-
-# Construir aplicación final
+# Construir aplicación
 RUN cargo build --release
 
 # Etapa de runtime
