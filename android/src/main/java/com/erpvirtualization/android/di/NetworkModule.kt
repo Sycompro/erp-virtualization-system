@@ -1,6 +1,7 @@
 package com.erpvirtualization.android.di
 
 import android.content.Context
+import com.erpvirtualization.android.BuildConfig
 import com.erpvirtualization.android.data.api.ERPApiService
 import com.erpvirtualization.android.data.local.PreferencesManager
 import dagger.Module
@@ -77,8 +78,11 @@ object NetworkModule {
         okHttpClient: OkHttpClient,
         json: Json
     ): Retrofit {
+        // Usar la URL configurada en BuildConfig
+        val baseUrl = BuildConfig.RAILWAY_API_URL
+        
         return Retrofit.Builder()
-            .baseUrl("https://erp.tuempresa.com/")
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(
                 json.asConverterFactory("application/json".toMediaType())

@@ -23,6 +23,10 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        
+        // Configuración del servidor Railway
+        buildConfigField("String", "RAILWAY_API_URL", "\"https://erp-virtualization-system-production.up.railway.app/\"")
+        buildConfigField("String", "LOCAL_SERVER_URL", "\"http://192.168.1.100:8081/\"")
     }
 
     buildTypes {
@@ -116,6 +120,12 @@ dependencies {
     implementation(libs.ktor.serialization.kotlinx.json)
     implementation(libs.ktor.client.logging)
     implementation(libs.ktor.client.auth)
+    
+    // Retrofit para Railway API
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-kotlinx-serialization:1.0.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     
     // Seguridad avanzada
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
